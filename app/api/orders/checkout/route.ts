@@ -1,0 +1,144 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import connectToDatabase from "@/lib/mongodb";
+import CartItem from "@/lib/models/cart";
+import Product from "@/lib/models/product";
+import Order from "@/lib/models/order";
+import Seller from "@/lib/models/seller";
+import Coupon from "@/lib/models/coupon";
+import { createNotification } from "@/lib/createNotification";
+import { validateCoupon } from "@/lib/validateCoupon";
+
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ message: "Please log in first." }, { status: 401 });
+    }
+
+    const { paymentMethod, deliveryAddress, deliveryBarangay, couponCode } = await req.json();
+    if (!deliveryAddress || !deliveryBarangay) {
+      return NextResponse.json({ message: "Please provide your delivery address." }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    const userId = (session.user as any).id;
+    const cartItems = await CartItem.find({ user: userId }).populate("product");
+
+    if (cartItems.length === 0) {
+      return NextResponse.json({ message: "Your basket is empty." }, { status: 400 });
+    }
+
+    // Validate stock before committing anything
+    for (const item of cartItems) {
+      const product = item.product as any;
+      if (!product || product.stock < item.quantity) {
+        return NextResponse.json(
+          { message: `Not enough stock for "${product?.name || 'a product'}".` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Group cart items by seller
+    const bySeller = new Map<string, typeof cartItems>();
+    cartItems.forEach((item) => {
+      const sellerId = (item.product as any).seller.toString();
+      if (!bySeller.has(sellerId)) bySeller.set(sellerId, []);
+      bySeller.get(sellerId)!.push(item);
+    });
+
+    // Validate the coupon (if any) against the whole cart, then split its discount
+    // proportionally across each seller's sub-order based on their share of the subtotal.
+    const cartSubtotal = cartItems.reduce(
+      (sum, item) => sum + (item.product as any).price * item.quantity, 0
+    );
+
+    let appliedCoupon = null;
+    let totalDiscount = 0;
+    if (couponCode) {
+      const result = await validateCoupon(couponCode, cartSubtotal);
+      if (result.error) {
+        return NextResponse.json({ message: result.error }, { status: 400 });
+      }
+      appliedCoupon = result.coupon;
+      totalDiscount = result.discount;
+    }
+
+    const createdOrders = [];
+    const sellerEntries = Array.from(bySeller.entries());
+    let discountAssigned = 0;
+
+    for (let i = 0; i < sellerEntries.length; i++) {
+      const [sellerId, items] = sellerEntries[i];
+      const subtotal = items.reduce((sum, item) => sum + (item.product as any).price * item.quantity, 0);
+      const feeOverrides = items
+        .map((item) => (item.product as any).deliveryFee)
+        .filter((fee) => fee !== undefined && fee !== null);
+      const deliveryFee = subtotal >= 500 ? 0 : feeOverrides.length > 0 ? Math.max(...feeOverrides) : 50;
+
+      // Give the last group whatever discount remains, so rounding never leaves a stray centavo unassigned.
+      const isLast = i === sellerEntries.length - 1;
+      const groupDiscount = totalDiscount === 0 ? 0 : isLast
+        ? Math.round((totalDiscount - discountAssigned) * 100) / 100
+        : Math.round((totalDiscount * (subtotal / cartSubtotal)) * 100) / 100;
+      discountAssigned += groupDiscount;
+
+      const total = subtotal + deliveryFee - groupDiscount;
+
+      const order = await Order.create({
+        buyer: userId,
+        seller: sellerId,
+        items: items.map((item) => ({
+          product: (item.product as any)._id,
+          name: (item.product as any).name,
+          price: (item.product as any).price,
+          quantity: item.quantity,
+          unit: (item.product as any).unit || "piece",
+          image: (item.product as any).image,
+        })),
+        subtotal,
+        deliveryFee,
+        couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+        discountAmount: groupDiscount,
+        total,
+        paymentMethod: paymentMethod || "cod",
+        deliveryAddress,
+        deliveryBarangay,
+      });
+
+      createdOrders.push(order._id.toString());
+
+      const sellerDoc = await Seller.findById(sellerId);
+      if (sellerDoc) {
+        await createNotification({
+          userId: sellerDoc.user.toString(),
+          type: "seller_new_order",
+          title: "New order received!",
+          body: `Order #${order._id.toString().slice(-6).toUpperCase()} — ₱${total.toFixed(2)}`,
+          link: `/seller/dashboard/orders/${order._id}`,
+        });
+      }
+
+      // Decrement stock and track units sold for each item
+      for (const item of items) {
+        await Product.findByIdAndUpdate((item.product as any)._id, {
+          $inc: { stock: -item.quantity, soldCount: item.quantity },
+        });
+      }
+    }
+
+    await CartItem.deleteMany({ user: userId });
+
+    if (appliedCoupon) {
+      await Coupon.findByIdAndUpdate(appliedCoupon._id, { $inc: { usedCount: 1 } });
+    }
+
+    return NextResponse.json({ message: "Order placed!", orderIds: createdOrders }, { status: 201 });
+  } catch (error) {
+    console.error("CHECKOUT ERROR:", error);
+    return NextResponse.json({ message: "Something went wrong during checkout." }, { status: 500 });
+  }
+}

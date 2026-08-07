@@ -1,0 +1,316 @@
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
+
+interface SavedAddress {
+  _id: string;
+  label: string;
+  recipientName: string;
+  phone: string;
+  address: string;
+  barangay: string;
+  isDefault: boolean;
+}
+
+interface CartItem {
+  _id: string;
+  quantity: number;
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+    unit: string;
+    image?: string;
+    seller?: { storeName: string };
+  };
+}
+
+export default function CheckoutPage() {
+  const router = useRouter();
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState('');
+
+  const [form, setForm] = useState({ deliveryAddress: '', deliveryBarangay: '', paymentMethod: 'cod' });
+  const [barangays, setBarangays] = useState<{ _id: string; name: string }[]>([]);
+  const [couponCode, setCouponCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('new');
+
+  useEffect(() => {
+    fetch('/api/barangays').then((res) => res.json()).then((data) => setBarangays(data.barangays || []));
+  }, []);
+
+  const selectAddress = (id: string) => {
+    setSelectedAddressId(id);
+    if (id === 'new') return;
+    const a = savedAddresses.find((sa) => sa._id === id);
+    if (a) setForm((f) => ({ ...f, deliveryAddress: a.address, deliveryBarangay: a.barangay }));
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      const [cartRes, profileRes, addressRes] = await Promise.all([
+        fetch('/api/cart'),
+        fetch('/api/user/profile'),
+        fetch('/api/addresses'),
+      ]);
+      const cartData = await cartRes.json();
+      const profileData = await profileRes.json();
+      const addressData = await addressRes.json();
+      const addresses: SavedAddress[] = addressData.addresses || [];
+
+      setItems(cartData.items || []);
+      setSavedAddresses(addresses);
+
+      const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress._id);
+        setForm({
+          deliveryAddress: defaultAddress.address,
+          deliveryBarangay: defaultAddress.barangay,
+          paymentMethod: profileData.user?.settings?.preferredPayment || 'cod',
+        });
+      } else {
+        setForm({
+          deliveryAddress: profileData.user?.settings?.address || '',
+          deliveryBarangay: profileData.user?.settings?.barangay || '',
+          paymentMethod: profileData.user?.settings?.preferredPayment || 'cod',
+        });
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const savedCode = localStorage.getItem('norzamart_coupon');
+    if (!savedCode || items.length === 0) return;
+
+    const cartSubtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: savedCode, subtotal: cartSubtotal }),
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (ok) {
+          setCouponCode(data.code);
+          setDiscount(data.discount);
+        } else {
+          localStorage.removeItem('norzamart_coupon');
+        }
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
+  // Group items by seller for the summary
+  const groups = items.reduce((acc: Record<string, { sellerName: string; items: CartItem[] }>, item) => {
+    const sellerId = item.product.seller ? (item.product.seller as any)._id || 'unknown' : 'unknown';
+    if (!acc[sellerId]) acc[sellerId] = { sellerName: item.product.seller?.storeName || 'Store', items: [] };
+    acc[sellerId].items.push(item);
+    return acc;
+  }, {});
+
+  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const sellerCount = Object.keys(groups).length;
+  const estimatedDeliveryFee = Object.values(groups).reduce((sum, g) => {
+    const groupSubtotal = g.items.reduce((s, i) => s + i.product.price * i.quantity, 0);
+    return sum + (groupSubtotal >= 500 ? 0 : 50);
+  }, 0);
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setPlacing(true);
+
+    try {
+      const res = await fetch('/api/orders/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, couponCode: couponCode || undefined }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || 'Something went wrong.');
+        setPlacing(false);
+        return;
+      }
+
+      localStorage.removeItem('norzamart_coupon');
+      window.dispatchEvent(new Event('cart-updated'));
+      router.push('/dashboard/orders?placed=1');
+    } catch {
+      setError('Unable to connect to the server.');
+      setPlacing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
+        <Navbar />
+        <p className="text-ink/50 text-sm font-body p-10">Loading checkout…</p>
+      </main>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
+        <Navbar />
+        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+          <span className="text-4xl block mb-3">🛒</span>
+          <p className="text-ink/60 font-body">Your basket is empty.</p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
+      <Navbar />
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <h1 className="font-display text-3xl font-semibold text-basil mb-6">Checkout</h1>
+
+        <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 flex flex-col gap-5">
+
+            <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm">
+              <h2 className="font-display text-lg font-semibold text-basil mb-4">📍 Delivery Address</h2>
+
+              {savedAddresses.length > 0 && (
+                <div className="flex flex-col gap-2 mb-4">
+                  {savedAddresses.map((a) => (
+                    <label key={a._id} className={`flex items-start gap-3 border rounded-xl px-4 py-3 cursor-pointer transition-all ${
+                      selectedAddressId === a._id ? 'border-basil bg-basil/5' : 'border-ink/10 bg-white/50'
+                    }`}>
+                      <input type="radio" name="savedAddress" checked={selectedAddressId === a._id}
+                        onChange={() => selectAddress(a._id)} className="accent-basil mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-ink">
+                          {a.label} {a.isDefault && <span className="text-[10px] font-bold text-basil bg-basil/10 px-2 py-0.5 rounded-full ml-1">Default</span>}
+                        </p>
+                        <p className="text-ink/60 text-xs font-body mt-0.5">{a.recipientName} • {a.phone}</p>
+                        <p className="text-ink/60 text-xs font-body">{a.address}, {a.barangay}</p>
+                      </div>
+                    </label>
+                  ))}
+                  <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer transition-all ${
+                    selectedAddressId === 'new' ? 'border-basil bg-basil/5' : 'border-ink/10 bg-white/50'
+                  }`}>
+                    <input type="radio" name="savedAddress" checked={selectedAddressId === 'new'}
+                      onChange={() => selectAddress('new')} className="accent-basil" />
+                    <span className="text-sm font-semibold text-ink">Enter a different address</span>
+                  </label>
+                </div>
+              )}
+
+              {(selectedAddressId === 'new' || savedAddresses.length === 0) && (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-ink/70 mb-1">Barangay</label>
+                    <select required value={form.deliveryBarangay} onChange={(e) => setForm({ ...form, deliveryBarangay: e.target.value })}
+                      className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40">
+                      <option value="">Select barangay</option>
+                      {barangays.map((b) => <option key={b._id} value={b.name}>{b.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-ink/70 mb-1">Full Address</label>
+                    <textarea required rows={2} value={form.deliveryAddress} onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })}
+                      placeholder="House no., street, landmark"
+                      className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+                  </div>
+                  <a href="/dashboard/addresses" className="text-xs font-bold text-basil hover:underline self-start">
+                    + Save this as a new address for next time
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm">
+              <h2 className="font-display text-lg font-semibold text-basil mb-4">💳 Payment Method</h2>
+              <div className="flex flex-col gap-2">
+                {[
+                  { value: 'cod', label: 'Cash on Delivery', icon: '💵' },
+                  { value: 'gcash', label: 'GCash', icon: '📱' },
+                  { value: 'bank', label: 'Bank Transfer', icon: '🏦' },
+                ].map((opt) => (
+                  <label key={opt.value} className={`flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer transition-all ${
+                    form.paymentMethod === opt.value ? 'border-basil bg-basil/5' : 'border-ink/10 bg-white/50'
+                  }`}>
+                    <input type="radio" name="payment" checked={form.paymentMethod === opt.value}
+                      onChange={() => setForm({ ...form, paymentMethod: opt.value })} className="accent-basil" />
+                    <span>{opt.icon}</span>
+                    <span className="text-sm font-semibold text-ink">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm">
+              <h2 className="font-display text-lg font-semibold text-basil mb-4">🛍 Items ({sellerCount} seller{sellerCount > 1 ? 's' : ''})</h2>
+              {Object.entries(groups).map(([sellerId, group]) => (
+                <div key={sellerId} className="mb-4 last:mb-0">
+                  <p className="text-xs font-bold text-ink/60 mb-2">{group.sellerName}</p>
+                  {group.items.map((item) => (
+                    <div key={item._id} className="flex items-center gap-3 py-1.5">
+                      <div className="w-10 h-10 bg-white rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                        {item.product.image ? (
+                          <img src={item.product.image} alt={item.product.name} className="max-w-full max-h-full object-contain" />
+                        ) : <span className="text-lg">🛒</span>}
+                      </div>
+                      <p className="flex-1 text-xs font-semibold text-ink truncate">{item.product.name} × {item.quantity}</p>
+                      <p className="font-mono text-xs font-bold text-ink">₱{(item.product.price * item.quantity).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm h-max">
+            <h2 className="font-display text-lg font-semibold text-basil mb-4">Order Summary</h2>
+            <div className="flex justify-between text-sm text-ink/70 font-body mb-2">
+              <span>Subtotal</span>
+              <span className="font-mono">₱{subtotal.toFixed(2)}</span>
+            </div>
+            {couponCode && discount > 0 && (
+              <div className="flex justify-between text-sm text-basil font-body mb-2">
+                <span>🎟️ {couponCode}</span>
+                <span className="font-mono">−₱{discount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm text-ink/70 font-body mb-4">
+              <span>Delivery ({sellerCount} store{sellerCount > 1 ? 's' : ''})</span>
+              <span className="font-mono">₱{estimatedDeliveryFee.toFixed(2)}</span>
+            </div>
+            <div className="border-t border-ink/10 pt-4 flex justify-between font-bold text-ink mb-5">
+              <span>Total</span>
+              <span className="font-mono">₱{Math.max(subtotal + estimatedDeliveryFee - discount, 0).toFixed(2)}</span>
+            </div>
+
+            {error && (
+              <p className="text-tomato text-xs font-semibold mb-3 text-center">{error}</p>
+            )}
+
+            <button type="submit" disabled={placing}
+              className="w-full bg-basil hover:bg-basil-light disabled:opacity-60 text-white font-bold py-3 rounded-xl shadow-md shadow-basil/20 text-sm transition-all">
+              {placing ? 'Placing Order…' : 'Place Order'}
+            </button>
+            <p className="text-ink/40 text-[11px] text-center mt-2 font-body">
+              {sellerCount > 1 ? `This will be split into ${sellerCount} separate orders.` : 'You\'ll receive order updates in your dashboard.'}
+            </p>
+          </div>
+        </form>
+      </div>
+    </main>
+  );
+}

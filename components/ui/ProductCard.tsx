@@ -1,0 +1,180 @@
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useToast } from './Toast';
+
+// Some callers pass a real photo (Cloudinary URL or legacy base64 data URI); others pass a bare
+// emoji string as a "no photo" placeholder. Only the former should ever be rendered as an <img>.
+const isImageUrl = (img?: string) => !!img && (img.startsWith('http') || img.startsWith('data:'));
+
+export interface ProductCardData {
+  id: string | number;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  image?: string;
+  unit?: string;
+  stock?: number;
+  brgy?: string;
+  category?: string;
+  sellerVerified?: boolean;
+  rating?: number | null;
+  reviewCount?: number;
+}
+
+interface ProductCardProps {
+  product: ProductCardData;
+  badge?: string;
+  badgeColor?: 'tomato' | 'basil';
+  compact?: boolean;
+  showWishlist?: boolean;
+  showAddToBasket?: boolean;
+  isWishlisted?: boolean;
+  onToggleWishlist?: (id: string) => void;
+}
+
+export default function ProductCard({
+  product: p,
+  badge,
+  badgeColor = 'tomato',
+  compact = false,
+  showWishlist = false,
+  showAddToBasket = false,
+  isWishlisted = false,
+  onToggleWishlist,
+}: ProductCardProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const { showToast } = useToast();
+  const [adding, setAdding] = useState(false);
+  const productId = String(p.id);
+
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!session) {
+      router.push('/');
+      return;
+    }
+    onToggleWishlist?.(productId);
+  };
+
+  const handleAddToBasket = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!session) {
+      router.push('/');
+      return;
+    }
+    setAdding(true);
+    try {
+      const res = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, quantity: 1 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.message || 'Could not add to basket.', 'error');
+      } else {
+        showToast(`${p.name} added to basket!`, 'success');
+        window.dispatchEvent(new Event('cart-updated'));
+      }
+    } catch {
+      showToast('Unable to connect to the server.', 'error');
+    }
+    setAdding(false);
+  };
+
+  if (compact) {
+    return (
+      <Link
+        href={`/product/${p.id}`}
+        className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all"
+      >
+        <div className="w-full h-24 bg-white rounded-xl flex items-center justify-center overflow-hidden mb-2">
+          {isImageUrl(p.image) ? (
+            <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
+          ) : (
+            <span className="text-3xl">{p.image || '🛒'}</span>
+          )}
+        </div>
+        <h4 className="text-xs font-bold text-ink line-clamp-2">{p.name}</h4>
+        <p className="font-mono text-xs font-bold text-ink mt-1">₱{p.price} <span className="text-ink/40 font-normal">/{p.unit || 'piece'}</span></p>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={`/product/${p.id}`}
+      className="bg-white/40 backdrop-blur-lg border border-white/60 rounded-2xl p-4 flex flex-col justify-between relative shadow-xl hover:shadow-2xl hover:bg-white/50 transition-all group"
+    >
+      {badge && (
+        <span className={`absolute top-3 left-3 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-md shadow-sm z-10 ${
+          badgeColor === 'basil' ? 'bg-basil/90' : 'bg-tomato/90'
+        }`}>
+          {badge}
+        </span>
+      )}
+
+      {showWishlist && (
+        <button
+          onClick={handleWishlist}
+          aria-label="Wishlist"
+          className={`absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all ${
+            isWishlisted ? 'bg-tomato text-white' : 'bg-white/80 hover:bg-white text-tomato'
+          }`}
+        >
+          {isWishlisted ? '♥' : '♡'}
+        </button>
+      )}
+
+      <div className="w-full h-32 sm:h-40 bg-white/50 shadow-inner rounded-xl flex items-center justify-center text-4xl mb-3 overflow-hidden group-hover:scale-105 transition-transform duration-300">
+        {isImageUrl(p.image) ? (
+          <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
+        ) : (
+          p.image || '🛒'
+        )}
+      </div>
+
+      <div>
+        {(p.brgy || p.category) && (
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/60 border border-emerald-200/50 backdrop-blur-sm px-2 py-0.5 rounded-md block w-max">
+              {p.brgy || p.category}
+            </span>
+            {p.sellerVerified && <span title="Verified Seller" className="text-basil text-[10px]">✔️</span>}
+          </div>
+        )}
+
+        <h4 className="text-sm font-bold text-gray-800 tracking-tight leading-tight line-clamp-2">{p.name}</h4>
+
+        {p.rating != null && p.rating > 0 && (
+          <p className="text-[11px] text-yellow-600 font-semibold mt-0.5">★ {p.rating.toFixed(1)} ({p.reviewCount})</p>
+        )}
+
+        <div className="flex items-baseline gap-2 mt-2">
+          <span className="text-base font-black text-gray-900">₱{p.price}</span>
+          {p.originalPrice && <span className="text-xs text-gray-500 font-medium line-through">₱{p.originalPrice}</span>}
+          <span className="text-[10px] text-gray-500">/{p.unit || 'piece'}</span>
+        </div>
+
+        {p.stock !== undefined && (
+          <p className="text-[10px] text-gray-500 mt-1">{p.stock} left in stock</p>
+        )}
+      </div>
+
+      {showAddToBasket && (
+        <button
+          onClick={handleAddToBasket}
+          disabled={adding}
+          className="w-full mt-4 bg-emerald-700/90 hover:bg-emerald-800 disabled:opacity-60 backdrop-blur-sm text-white text-xs font-bold py-2.5 rounded-xl border border-emerald-500/50 shadow-md transition-all"
+        >
+          {adding ? 'Adding…' : '+ Add to Basket'}
+        </button>
+      )}
+    </Link>
+  );
+}
