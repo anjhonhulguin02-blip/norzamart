@@ -16,7 +16,7 @@ export async function GET() {
 
   await connectToDatabase();
   const items = await CartItem.find({ user: (session.user as any).id })
-    .populate({ path: "product", populate: { path: "seller", select: "storeName barangay" } })
+    .populate({ path: "product", populate: { path: "seller", select: "storeName barangay estimatedDeliveryTime" } })
     .sort({ createdAt: -1 });
 
   return NextResponse.json({ items });

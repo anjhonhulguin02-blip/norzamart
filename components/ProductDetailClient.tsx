@@ -40,6 +40,7 @@ interface Props {
   origin?: string;
   freshUntil?: string;
   soldCount?: number;
+  estimatedDeliveryTime?: string;
 }
 
 function timeAgo(dateStr: string) {
@@ -57,7 +58,7 @@ function timeAgo(dateStr: string) {
 export default function ProductDetailClient({
   productId, sellerId, name, price, originalPrice, stock, unit, images, category,
   sellerName, sellerBarangay, deliveryBarangays, deliveryFee, buyerBarangay, description, tag, createdAt,
-  weight, origin, freshUntil, soldCount,
+  weight, origin, freshUntil, soldCount, estimatedDeliveryTime,
 }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -163,6 +164,14 @@ export default function ProductDetailClient({
       setCartMessage('Unable to connect to the server.');
     }
     setAddingToCart(false);
+  };
+
+  const handleBuyNow = () => {
+    if (!session) {
+      router.push('/');
+      return;
+    }
+    router.push(`/checkout?buyNow=1&productId=${productId}&quantity=${quantity}`);
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -354,6 +363,9 @@ export default function ProductDetailClient({
                 ? 'This seller delivers to all barangays in Norzagaray.'
                 : `Delivers to: ${deliveryBarangays.join(', ')}`}
             </p>
+            <p className="text-basil text-xs font-semibold mt-1.5">
+              🕐 Estimated Delivery: {estimatedDeliveryTime || '1-3 days'}
+            </p>
             <p className="text-ink/40 text-[11px] mt-1">
               {deliveryFee !== undefined && deliveryFee !== null
                 ? `Delivery fee for this item: ₱${deliveryFee.toFixed(2)} (waived on orders ₱500 and up, per store).`
@@ -416,6 +428,12 @@ export default function ProductDetailClient({
           )}
 
           <div className="flex gap-3 mt-4">
+            <button
+              onClick={handleBuyNow}
+              disabled={stock === 0}
+              className="flex-1 bg-tomato hover:bg-tomato/90 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl shadow-md shadow-tomato/20 text-sm transition-all">
+              Buy Now
+            </button>
             <button
               onClick={handleAddToCart}
               disabled={stock === 0 || addingToCart}

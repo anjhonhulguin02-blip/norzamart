@@ -19,6 +19,7 @@ const SellerSchema = new Schema(
     website: { type: String },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     deliveryBarangays: { type: [String], default: [] },
+    estimatedDeliveryTime: { type: String, enum: ["", "Same-day", "1-2 days", "2-3 days", "3-5 days"], default: "" },
   },
   { timestamps: true }
 );

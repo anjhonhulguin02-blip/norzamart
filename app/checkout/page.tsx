@@ -23,7 +23,7 @@ interface CartItem {
     price: number;
     unit: string;
     image?: string;
-    seller?: { storeName: string };
+    seller?: { storeName: string; estimatedDeliveryTime?: string };
   };
 }
 
@@ -40,6 +40,8 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState('new');
+  const [buyNow, setBuyNow] = useState<{ productId: string; quantity: number } | null>(null);
+  const [buyNowRequested, setBuyNowRequested] = useState(false);
 
   useEffect(() => {
     fetch('/api/barangays').then((res) => res.json()).then((data) => setBarangays(data.barangays || []));
@@ -54,17 +56,37 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [cartRes, profileRes, addressRes] = await Promise.all([
-        fetch('/api/cart'),
+      const params = new URLSearchParams(window.location.search);
+      const buyNowProductId = params.get('buyNow') === '1' ? params.get('productId') : null;
+      const buyNowQuantity = Math.max(1, Number(params.get('quantity')) || 1);
+      setBuyNowRequested(!!buyNowProductId);
+
+      const [cartOrProductRes, profileRes, addressRes] = await Promise.all([
+        buyNowProductId
+          ? fetch('/api/products/batch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids: [buyNowProductId] }),
+            })
+          : fetch('/api/cart'),
         fetch('/api/user/profile'),
         fetch('/api/addresses'),
       ]);
-      const cartData = await cartRes.json();
+      const cartOrProductData = await cartOrProductRes.json();
       const profileData = await profileRes.json();
       const addressData = await addressRes.json();
       const addresses: SavedAddress[] = addressData.addresses || [];
 
-      setItems(cartData.items || []);
+      if (buyNowProductId) {
+        const product = (cartOrProductData.products || [])[0];
+        if (product) {
+          const qty = Math.min(buyNowQuantity, product.stock ?? buyNowQuantity);
+          setBuyNow({ productId: buyNowProductId, quantity: qty });
+          setItems([{ _id: 'buy-now', quantity: qty, product }]);
+        }
+      } else {
+        setItems(cartOrProductData.items || []);
+      }
       setSavedAddresses(addresses);
 
       const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
@@ -110,9 +132,13 @@ export default function CheckoutPage() {
   }, [items]);
 
   // Group items by seller for the summary
-  const groups = items.reduce((acc: Record<string, { sellerName: string; items: CartItem[] }>, item) => {
+  const groups = items.reduce((acc: Record<string, { sellerName: string; estimatedDeliveryTime?: string; items: CartItem[] }>, item) => {
     const sellerId = item.product.seller ? (item.product.seller as any)._id || 'unknown' : 'unknown';
-    if (!acc[sellerId]) acc[sellerId] = { sellerName: item.product.seller?.storeName || 'Store', items: [] };
+    if (!acc[sellerId]) acc[sellerId] = {
+      sellerName: item.product.seller?.storeName || 'Store',
+      estimatedDeliveryTime: item.product.seller?.estimatedDeliveryTime,
+      items: [],
+    };
     acc[sellerId].items.push(item);
     return acc;
   }, {});
@@ -133,7 +159,7 @@ export default function CheckoutPage() {
       const res = await fetch('/api/orders/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, couponCode: couponCode || undefined }),
+        body: JSON.stringify({ ...form, couponCode: couponCode || undefined, buyNow: buyNow || undefined }),
       });
       const data = await res.json();
 
@@ -143,8 +169,10 @@ export default function CheckoutPage() {
         return;
       }
 
-      localStorage.removeItem('norzamart_coupon');
-      window.dispatchEvent(new Event('cart-updated'));
+      if (!buyNow) {
+        localStorage.removeItem('norzamart_coupon');
+        window.dispatchEvent(new Event('cart-updated'));
+      }
       router.push('/dashboard/orders?placed=1');
     } catch {
       setError('Unable to connect to the server.');
@@ -167,7 +195,9 @@ export default function CheckoutPage() {
         <Navbar />
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
           <span className="text-4xl block mb-3">🛒</span>
-          <p className="text-ink/60 font-body">Your basket is empty.</p>
+          <p className="text-ink/60 font-body">
+            {buyNowRequested ? 'This product is no longer available.' : 'Your basket is empty.'}
+          </p>
         </div>
       </main>
     );
@@ -259,7 +289,12 @@ export default function CheckoutPage() {
               <h2 className="font-display text-lg font-semibold text-basil mb-4">🛍 Items ({sellerCount} seller{sellerCount > 1 ? 's' : ''})</h2>
               {Object.entries(groups).map(([sellerId, group]) => (
                 <div key={sellerId} className="mb-4 last:mb-0">
-                  <p className="text-xs font-bold text-ink/60 mb-2">{group.sellerName}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-ink/60">{group.sellerName}</p>
+                    <p className="text-basil text-[11px] font-semibold">
+                      🕐 {group.estimatedDeliveryTime || '1-3 days'}
+                    </p>
+                  </div>
                   {group.items.map((item) => (
                     <div key={item._id} className="flex items-center gap-3 py-1.5">
                       <div className="w-10 h-10 bg-white rounded-lg overflow-hidden flex items-center justify-center shrink-0">

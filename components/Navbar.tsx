@@ -59,6 +59,18 @@ export default function Navbar() {
   };
 
   useEffect(() => {
+    fetchCartCount();
+    fetchChatCount();
+    const interval = setInterval(fetchChatCount, 15000);
+    window.addEventListener('cart-updated', fetchCartCount);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cart-updated', fetchCartCount);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  useEffect(() => {
     if (searchQuery.trim().length < 2) {
       setSuggestions([]);
       return;

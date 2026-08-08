@@ -14,7 +14,7 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const {
       storeName, storeLogo, storeBanner, ownerName, contactNumber, email, address, barangay,
-      storeDescription, deliveryBarangays, businessHours, facebook, instagram, website,
+      storeDescription, deliveryBarangays, businessHours, facebook, instagram, website, estimatedDeliveryTime,
     } = body;
 
     await connectToDatabase();
@@ -22,7 +22,7 @@ export async function PUT(req: Request) {
       { user: (session.user as any).id },
       {
         storeName, storeLogo, storeBanner, ownerName, contactNumber, email, address, barangay,
-        storeDescription, deliveryBarangays, businessHours, facebook, instagram, website,
+        storeDescription, deliveryBarangays, businessHours, facebook, instagram, website, estimatedDeliveryTime,
       },
       { new: true }
     );

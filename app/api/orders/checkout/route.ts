@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Please log in first." }, { status: 401 });
     }
 
-    const { paymentMethod, deliveryAddress, deliveryBarangay, couponCode } = await req.json();
+    const { paymentMethod, deliveryAddress, deliveryBarangay, couponCode, buyNow } = await req.json();
     if (!deliveryAddress || !deliveryBarangay) {
       return NextResponse.json({ message: "Please provide your delivery address." }, { status: 400 });
     }
@@ -25,7 +25,18 @@ export async function POST(req: Request) {
     await connectToDatabase();
 
     const userId = (session.user as any).id;
-    const cartItems = await CartItem.find({ user: userId }).populate("product");
+
+    // "Buy Now" checks out a single product directly, bypassing the persistent basket.
+    let cartItems: { product: any; quantity: number }[];
+    if (buyNow?.productId) {
+      const product = await Product.findById(buyNow.productId);
+      if (!product || product.status !== "active" || product.approvalStatus !== "approved") {
+        return NextResponse.json({ message: "This product is no longer available." }, { status: 400 });
+      }
+      cartItems = [{ product, quantity: Math.max(1, Number(buyNow.quantity) || 1) }];
+    } else {
+      cartItems = await CartItem.find({ user: userId }).populate("product");
+    }
 
     if (cartItems.length === 0) {
       return NextResponse.json({ message: "Your basket is empty." }, { status: 400 });
@@ -130,7 +141,9 @@ export async function POST(req: Request) {
       }
     }
 
-    await CartItem.deleteMany({ user: userId });
+    if (!buyNow?.productId) {
+      await CartItem.deleteMany({ user: userId });
+    }
 
     if (appliedCoupon) {
       await Coupon.findByIdAndUpdate(appliedCoupon._id, { $inc: { usedCount: 1 } });

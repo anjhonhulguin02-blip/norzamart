@@ -13,7 +13,7 @@ export default function SellerRegisterPage() {
   const [form, setForm] = useState({
     storeName: '', ownerName: '', contactNumber: '',
     email: session?.user?.email || '', address: '', barangay: '',
-    storeDescription: '', businessHours: '', facebook: '', instagram: '', website: '',
+    storeDescription: '', businessHours: '', facebook: '', instagram: '', website: '', estimatedDeliveryTime: '',
   });
   const [storeLogo, setStoreLogo] = useState<string | null>(null);
   const [storeBanner, setStoreBanner] = useState<string | null>(null);
@@ -161,6 +161,18 @@ export default function SellerRegisterPage() {
             <label className="block text-xs font-bold text-ink/70 mb-1">Store Description</label>
             <textarea rows={3} value={form.storeDescription} onChange={(e) => update_('storeDescription', e.target.value)}
               className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-ink/70 mb-1">Estimated Delivery Time</label>
+            <select value={form.estimatedDeliveryTime} onChange={(e) => update_('estimatedDeliveryTime', e.target.value)}
+              className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40">
+              <option value="">Not sure yet</option>
+              <option value="Same-day">Same-day</option>
+              <option value="1-2 days">1-2 days</option>
+              <option value="2-3 days">2-3 days</option>
+              <option value="3-5 days">3-5 days</option>
+            </select>
           </div>
 
           <div>

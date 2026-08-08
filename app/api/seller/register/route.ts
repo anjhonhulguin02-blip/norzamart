@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const {
       storeName, storeLogo, storeBanner, ownerName, contactNumber,
       email, address, barangay, governmentId, storeDescription,
-      businessHours, facebook, instagram, website,
+      businessHours, facebook, instagram, website, estimatedDeliveryTime,
     } = body;
 
     if (!storeName || !ownerName || !contactNumber || !email || !address || !barangay || !governmentId) {
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       user: (session.user as any).id,
       storeName, storeLogo, storeBanner, ownerName, contactNumber,
       email, address, barangay, governmentId, storeDescription,
-      businessHours, facebook, instagram, website,
+      businessHours, facebook, instagram, website, estimatedDeliveryTime,
     });
 
     await User.findByIdAndUpdate((session.user as any).id, { role: "seller" });

@@ -15,7 +15,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
 
   await connectToDatabase();
-  const product = await Product.findById(id).populate('seller', 'storeName barangay deliveryBarangays').lean() as any;
+  const product = await Product.findById(id).populate('seller', 'storeName barangay deliveryBarangays estimatedDeliveryTime').lean() as any;
 
   if (!product || product.status !== 'active' || product.approvalStatus !== 'approved') {
     notFound();
@@ -56,6 +56,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         origin={product.origin}
         freshUntil={product.freshUntil}
         soldCount={product.soldCount || 0}
+        estimatedDeliveryTime={product.seller?.estimatedDeliveryTime || ''}
       />
       <RelatedProducts productId={product._id.toString()} />
     </main>
