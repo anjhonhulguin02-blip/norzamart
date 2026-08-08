@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Categories', href: '/admin/categories', icon: '🗂️' },
   { label: 'Barangays', href: '/admin/barangays', icon: '📍' },
   { label: 'Coupons', href: '/admin/coupons', icon: '🎟️' },
+  { label: 'Subscribers', href: '/admin/subscribers', icon: '📧' },
   { label: 'Payouts', href: '/admin/payouts', icon: '💰' },
 ];
 

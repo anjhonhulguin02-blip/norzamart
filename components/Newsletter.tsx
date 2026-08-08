@@ -5,11 +5,29 @@ import React, { useState } from 'react';
 export default function Newsletter() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Note: no backend wired up yet — this just gives UI feedback for now.
-    setSubmitted(true);
+    setError('');
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Something went wrong.');
+      } else {
+        setSubmitted(true);
+      }
+    } catch {
+      setError('Unable to connect to the server.');
+    }
+    setSubmitting(false);
   };
 
   return (
@@ -30,11 +48,12 @@ export default function Newsletter() {
               placeholder="you@email.com"
               className="flex-1 bg-white/95 rounded-full px-4 py-2.5 text-sm focus:outline-none"
             />
-            <button type="submit" className="bg-white text-basil font-bold text-sm px-6 py-2.5 rounded-full hover:bg-white/90 transition-all">
-              Subscribe
+            <button type="submit" disabled={submitting} className="bg-white text-basil font-bold text-sm px-6 py-2.5 rounded-full hover:bg-white/90 disabled:opacity-60 transition-all">
+              {submitting ? 'Subscribing…' : 'Subscribe'}
             </button>
           </form>
         )}
+        {error && <p className="text-white text-xs font-semibold mt-3 relative bg-tomato/30 rounded-full py-1.5 px-4 inline-block">{error}</p>}
       </div>
     </div>
   );

@@ -16,18 +16,18 @@ export default function SiteFooter() {
         <div>
           <h5 className="text-xs font-bold text-ink/70 uppercase tracking-wide mb-3">Company</h5>
           <ul className="flex flex-col gap-2 text-xs text-ink/60 font-body">
-            <li><Link href="/" className="hover:text-basil transition-colors">About</Link></li>
+            <li><Link href="/about" className="hover:text-basil transition-colors">About</Link></li>
             <li><Link href="/seller/register" className="hover:text-basil transition-colors">Become a Seller</Link></li>
-            <li><a href="#" className="hover:text-basil transition-colors">Contact</a></li>
+            <li><Link href="/contact" className="hover:text-basil transition-colors">Contact</Link></li>
           </ul>
         </div>
 
         <div>
           <h5 className="text-xs font-bold text-ink/70 uppercase tracking-wide mb-3">Legal</h5>
           <ul className="flex flex-col gap-2 text-xs text-ink/60 font-body">
-            <li><a href="#" className="hover:text-basil transition-colors">Privacy Policy</a></li>
-            <li><a href="#" className="hover:text-basil transition-colors">Terms of Service</a></li>
-            <li><a href="#" className="hover:text-basil transition-colors">FAQ</a></li>
+            <li><Link href="/privacy" className="hover:text-basil transition-colors">Privacy Policy</Link></li>
+            <li><Link href="/terms" className="hover:text-basil transition-colors">Terms of Service</Link></li>
+            <li><Link href="/faq" className="hover:text-basil transition-colors">FAQ</Link></li>
           </ul>
         </div>
 
