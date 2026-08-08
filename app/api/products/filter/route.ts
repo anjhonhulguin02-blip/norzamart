@@ -3,8 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import Product from "@/lib/models/product";
 import Review from "@/lib/models/review";
 import Seller from "@/lib/models/seller";
-
-void Seller;
+import SearchLog from "@/lib/models/searchlog";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -12,18 +11,33 @@ export async function GET(req: Request) {
   const barangay = searchParams.get("barangay") || undefined;
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
+  const minRating = searchParams.get("minRating");
   const sort = searchParams.get("sort") || "newest";
-  const q = searchParams.get("q") || undefined;
+  const q = searchParams.get("q")?.trim() || undefined;
 
   await connectToDatabase();
 
   const filter: any = { status: "active", approvalStatus: "approved" };
   if (category) filter.category = category;
-  if (q) filter.name = { $regex: q, $options: "i" };
   if (minPrice || maxPrice) {
     filter.price = {};
     if (minPrice) filter.price.$gte = Number(minPrice);
     if (maxPrice) filter.price.$lte = Number(maxPrice);
+  }
+
+  if (q) {
+    if (q.length >= 2) {
+      SearchLog.findOneAndUpdate(
+        { term: q.toLowerCase() },
+        { $inc: { count: 1 } },
+        { upsert: true }
+      ).catch(() => {});
+    }
+    const matchingSellers = await Seller.find({ storeName: { $regex: q, $options: "i" } }).select("_id").lean();
+    filter.$or = [
+      { name: { $regex: q, $options: "i" } },
+      { seller: { $in: matchingSellers.map((s: any) => s._id) } },
+    ];
   }
 
   let sortOption: any = { createdAt: -1 };
@@ -62,6 +76,11 @@ export async function GET(req: Request) {
     reviewCount: ratingMap[p._id.toString()]?.count ?? 0,
     sellerVerified: p.seller?.status === "approved",
   }));
+
+  if (minRating) {
+    const threshold = Number(minRating);
+    results = results.filter((r) => (r.rating || 0) >= threshold);
+  }
 
   if (sort === "rating") {
     results = results.sort((a, b) => (b.rating || 0) - (a.rating || 0));

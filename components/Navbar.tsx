@@ -22,6 +22,8 @@ export default function Navbar() {
   const [chatCount, setChatCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [storeSuggestions, setStoreSuggestions] = useState<any[]>([]);
+  const [popularSearches, setPopularSearches] = useState<{ term: string; count: number }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const fetchCartCount = async () => {
@@ -71,18 +73,35 @@ export default function Navbar() {
   }, [session]);
 
   useEffect(() => {
+    fetch('/api/search/popular')
+      .then((res) => res.json())
+      .then((data) => setPopularSearches(data.popular || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (searchQuery.trim().length < 2) {
       setSuggestions([]);
+      setStoreSuggestions([]);
       return;
     }
     const timeout = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
         .then((res) => res.json())
-        .then((data) => setSuggestions(data.suggestions || []))
+        .then((data) => {
+          setSuggestions(data.suggestions || []);
+          setStoreSuggestions(data.stores || []);
+        })
         .catch(() => {});
     }, 250);
     return () => clearTimeout(timeout);
   }, [searchQuery]);
+
+  const runSearch = (term: string) => {
+    setShowSuggestions(false);
+    setSearchQuery(term);
+    router.push(`/search?q=${encodeURIComponent(term)}`);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,7 +197,30 @@ export default function Navbar() {
             </form>
 
             <AnimatePresence>
-              {showSuggestions && suggestions.length > 0 && (
+              {showSuggestions && searchQuery.trim().length < 2 && popularSearches.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full mt-2 w-full bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl overflow-hidden z-50 p-4"
+                >
+                  <p className="text-[10px] font-bold text-ink/40 uppercase tracking-wide mb-2">Popular Searches</p>
+                  <div className="flex flex-wrap gap-2">
+                    {popularSearches.map((p) => (
+                      <button
+                        key={p.term}
+                        onMouseDown={() => runSearch(p.term)}
+                        className="text-xs font-semibold text-ink bg-basil/5 hover:bg-basil/10 px-3 py-1.5 rounded-full transition-colors capitalize"
+                      >
+                        🔥 {p.term}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {showSuggestions && searchQuery.trim().length >= 2 && (suggestions.length > 0 || storeSuggestions.length > 0) && (
                 <motion.div
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -186,20 +228,47 @@ export default function Navbar() {
                   transition={{ duration: 0.15 }}
                   className="absolute top-full mt-2 w-full bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl overflow-hidden z-50"
                 >
-                  {suggestions.map((s) => (
-                    <Link
-                      key={s._id}
-                      href={`/product/${s._id}`}
-                      onClick={() => setShowSuggestions(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-basil/5 transition-colors"
-                    >
-                      <div className="w-8 h-8 bg-white rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-ink/10">
-                        {s.image ? <img src={s.image} alt={s.name} className="max-w-full max-h-full object-contain" /> : <span className="text-sm">🛒</span>}
-                      </div>
-                      <span className="text-sm font-semibold text-ink truncate flex-1">{s.name}</span>
-                      <span className="font-mono text-xs font-bold text-basil shrink-0">₱{s.price}</span>
-                    </Link>
-                  ))}
+                  {storeSuggestions.length > 0 && (
+                    <div className="border-b border-ink/5">
+                      <p className="text-[10px] font-bold text-ink/40 uppercase tracking-wide px-4 pt-3 pb-1">Stores</p>
+                      {storeSuggestions.map((s) => (
+                        <Link
+                          key={s._id}
+                          href={`/seller/${s._id}`}
+                          onClick={() => setShowSuggestions(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-basil/5 transition-colors"
+                        >
+                          <div className="w-8 h-8 bg-white rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-ink/10">
+                            {s.storeLogo ? <img src={s.storeLogo} alt={s.storeName} className="max-w-full max-h-full object-contain" /> : <span className="text-sm">🏬</span>}
+                          </div>
+                          <span className="text-sm font-semibold text-ink truncate flex-1">{s.storeName}</span>
+                          {s.status === 'approved' && <span className="text-basil text-xs shrink-0">✔️</span>}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {suggestions.length > 0 && (
+                    <div>
+                      {storeSuggestions.length > 0 && (
+                        <p className="text-[10px] font-bold text-ink/40 uppercase tracking-wide px-4 pt-3 pb-1">Products</p>
+                      )}
+                      {suggestions.map((s) => (
+                        <Link
+                          key={s._id}
+                          href={`/product/${s._id}`}
+                          onClick={() => setShowSuggestions(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-basil/5 transition-colors"
+                        >
+                          <div className="w-8 h-8 bg-white rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-ink/10">
+                            {s.image ? <img src={s.image} alt={s.name} className="max-w-full max-h-full object-contain" /> : <span className="text-sm">🛒</span>}
+                          </div>
+                          <span className="text-sm font-semibold text-ink truncate flex-1">{s.name}</span>
+                          <span className="font-mono text-xs font-bold text-basil shrink-0">₱{s.price}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

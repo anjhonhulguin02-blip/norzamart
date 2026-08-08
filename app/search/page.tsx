@@ -25,6 +25,7 @@ function SearchContent() {
     barangay: searchParams.get('barangay') || '',
     minPrice: '',
     maxPrice: '',
+    minRating: '',
     sort: 'newest',
   });
 
@@ -36,6 +37,7 @@ function SearchContent() {
     if (filters.barangay) params.set('barangay', filters.barangay);
     if (filters.minPrice) params.set('minPrice', filters.minPrice);
     if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
+    if (filters.minRating) params.set('minRating', filters.minRating);
     params.set('sort', filters.sort);
 
     const res = await fetch(`/api/products/filter?${params.toString()}`);
@@ -79,6 +81,14 @@ function SearchContent() {
             className="w-20 bg-white/70 border border-white/70 rounded-xl px-3 py-2 text-xs font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-basil/40"
           />
 
+          <select value={filters.minRating} onChange={(e) => setFilters({ ...filters, minRating: e.target.value })}
+            className="bg-white/70 border border-white/70 rounded-xl px-3 py-2 text-xs font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-basil/40">
+            <option value="">Any Rating</option>
+            <option value="4">★ 4 & up</option>
+            <option value="3">★ 3 & up</option>
+            <option value="2">★ 2 & up</option>
+          </select>
+
           <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
             className="bg-white/70 border border-white/70 rounded-xl px-3 py-2 text-xs font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-basil/40">
             <option value="newest">Newest</option>
@@ -88,9 +98,9 @@ function SearchContent() {
             <option value="discount">Biggest Discount</option>
           </select>
 
-          {(filters.category || filters.barangay || filters.minPrice || filters.maxPrice) && (
+          {(filters.category || filters.barangay || filters.minPrice || filters.maxPrice || filters.minRating) && (
             <button
-              onClick={() => setFilters({ category: '', barangay: '', minPrice: '', maxPrice: '', sort: 'newest' })}
+              onClick={() => setFilters({ category: '', barangay: '', minPrice: '', maxPrice: '', minRating: '', sort: 'newest' })}
               className="text-xs font-bold text-tomato hover:underline"
             >
               ✕ Clear filters
