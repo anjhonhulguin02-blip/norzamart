@@ -36,7 +36,7 @@ export default async function Home({
     buyerBarangay = buyerDoc?.settings?.barangay || '';
   }
 
-  const allProducts = await Product.find({ status: 'active' }).select('category').lean() as any[];
+  const allProducts = await Product.find({ status: 'active', approvalStatus: 'approved' }).select('category').lean() as any[];
   const categoryCounts: Record<string, number> = {};
   allProducts.forEach((p: any) => {
     categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
@@ -53,7 +53,7 @@ export default async function Home({
     count: categoryCounts[cat],
   }));
 
-  const filter: any = { status: 'active' };
+  const filter: any = { status: 'active', approvalStatus: 'approved' };
   if (category) filter.category = category;
 
   let rawProducts = await Product.find(filter)
@@ -96,7 +96,7 @@ export default async function Home({
   }));
 
   // Today's Deals — active products with a discount, from the full (unfiltered) set
-  const dealsRaw = await Product.find({ status: 'active', originalPrice: { $exists: true, $ne: null } })
+  const dealsRaw = await Product.find({ status: 'active', approvalStatus: 'approved', originalPrice: { $exists: true, $ne: null } })
     .sort({ createdAt: -1 })
     .limit(10)
     .lean() as any[];
@@ -104,14 +104,14 @@ export default async function Home({
     .filter((p: any) => p.originalPrice > p.price)
     .map((p: any) => ({
       id: p._id.toString(), name: p.name, price: p.price, originalPrice: p.originalPrice,
-      image: p.image, unit: p.unit || 'piece', stock: p.stock,
+      image: p.image, unit: p.unit || 'piece', stock: p.stock, soldCount: p.soldCount || 0,
     }));
 
   // Fresh Today — products created within the last 24 hours
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const freshRaw = await Product.find({ status: 'active', createdAt: { $gte: yesterday } })
+  const freshRaw = await Product.find({ status: 'active', approvalStatus: 'approved', createdAt: { $gte: yesterday } })
     .sort({ createdAt: -1 })
-    .limit(10)
+    .limit(20)
     .lean() as any[];
   const freshProducts = freshRaw.map((p: any) => ({
     id: p._id.toString(), name: p.name, price: p.price, unit: p.unit || 'piece',
@@ -121,7 +121,7 @@ export default async function Home({
   // Featured Sellers — top sellers by product count
   const sellersRaw = await Seller.find({}).lean() as any[];
   const sellerProductCounts = await Product.aggregate([
-    { $match: { status: 'active' } },
+    { $match: { status: 'active', approvalStatus: 'approved' } },
     { $group: { _id: '$seller', count: { $sum: 1 } } },
   ]);
   const sellerCountMap: Record<string, number> = {};

@@ -23,6 +23,7 @@ export interface ProductCardData {
   sellerVerified?: boolean;
   rating?: number | null;
   reviewCount?: number;
+  progressPct?: number;
 }
 
 interface ProductCardProps {
@@ -163,6 +164,18 @@ export default function ProductCard({
 
         {p.stock !== undefined && (
           <p className="text-[10px] text-gray-500 mt-1">{p.stock} left in stock</p>
+        )}
+
+        {p.progressPct !== undefined && (
+          <div className="mt-2">
+            <div className="w-full h-1.5 bg-tomato/15 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-tomato rounded-full transition-all"
+                style={{ width: `${Math.min(100, Math.max(p.progressPct, 4))}%` }}
+              />
+            </div>
+            <p className="text-[9px] text-tomato font-bold mt-1">{Math.round(p.progressPct)}% claimed</p>
+          </div>
         )}
       </div>
 

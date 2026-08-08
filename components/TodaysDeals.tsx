@@ -12,6 +12,7 @@ interface Deal {
   image?: string;
   unit: string;
   stock: number;
+  soldCount?: number;
 }
 
 function useCountdownToMidnight() {
@@ -58,6 +59,8 @@ export default function TodaysDeals({ deals }: { deals: Deal[] }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
         {deals.map((d, i) => {
           const discountPct = Math.round(((d.originalPrice - d.price) / d.originalPrice) * 100);
+          const sold = d.soldCount || 0;
+          const claimedPct = sold + d.stock > 0 ? (sold / (sold + d.stock)) * 100 : 0;
           return (
             <motion.div
               key={d.id}
@@ -66,7 +69,7 @@ export default function TodaysDeals({ deals }: { deals: Deal[] }) {
               viewport={{ once: true }}
               transition={{ duration: 0.35, delay: i * 0.05 }}
             >
-              <ProductCard product={d} badge={`-${discountPct}%`} badgeColor="tomato" />
+              <ProductCard product={{ ...d, progressPct: claimedPct }} badge={`-${discountPct}%`} badgeColor="tomato" />
             </motion.div>
           );
         })}
