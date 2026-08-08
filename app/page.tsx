@@ -11,12 +11,18 @@ import WhyChooseUs from '../components/WhyChooseUs';
 import TestimonialsSection from '../components/TestimonialsSection';
 import Newsletter from '../components/Newsletter';
 import SiteFooter from '../components/SiteFooter';
+import ProductsNearYou from '../components/ProductsNearYou';
+import NearbySellers from '../components/NearbySellers';
+import TrendingInBarangay from '../components/TrendingInBarangay';
+import SellerOfTheWeek from '../components/SellerOfTheWeek';
+import CommunityRecommendations from '../components/CommunityRecommendations';
 import connectToDatabase from '@/lib/mongodb';
 import Product from '@/lib/models/product';
 import Seller from '@/lib/models/seller';
 import Review from '@/lib/models/review';
 import Category from '@/lib/models/category';
 import Follow from '@/lib/models/follow';
+import Order from '@/lib/models/order';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import User from '@/lib/models/user';
@@ -119,6 +125,66 @@ export default async function Home({
     image: p.image, category: p.category,
   }));
 
+  const sellerFollowerAgg = await Follow.aggregate([
+    { $group: { _id: '$seller', count: { $sum: 1 } } },
+  ]);
+  const sellerFollowerMap: Record<string, number> = {};
+  sellerFollowerAgg.forEach((f: any) => { sellerFollowerMap[f._id.toString()] = f.count; });
+
+  // Hyperlocal: Products Near You, Nearby Sellers, Trending in Your Barangay
+  // — only computed when the buyer has a saved barangay to anchor "near you" to.
+  let nearbyProducts: any[] = [];
+  let nearbySellers: any[] = [];
+  let trendingProducts: any[] = [];
+  if (buyerBarangay) {
+    const nearbyRaw = await Product.find({ status: 'active', approvalStatus: 'approved' })
+      .populate('seller', 'storeName barangay status')
+      .sort({ createdAt: -1 })
+      .lean() as any[];
+    const sameBarangay = nearbyRaw.filter((p: any) => p.seller?.barangay === buyerBarangay);
+
+    nearbyProducts = sameBarangay.slice(0, 10).map((p: any) => ({
+      id: p._id.toString(), name: p.name, price: p.price, originalPrice: p.originalPrice,
+      image: p.image || '🛒', unit: p.unit || 'piece', brgy: p.seller?.barangay || '',
+      sellerVerified: p.seller?.status === 'approved',
+    }));
+
+    const nearbySellerIds = Array.from(new Set(sameBarangay.map((p: any) => p.seller?._id?.toString()).filter(Boolean)));
+    nearbySellers = nearbySellerIds.slice(0, 8).map((id) => {
+      const s = sameBarangay.find((p: any) => p.seller?._id?.toString() === id)!.seller;
+      return {
+        id,
+        storeName: s.storeName,
+        storeLogo: s.storeLogo,
+        status: s.status,
+        productCount: sameBarangay.filter((p: any) => p.seller?._id?.toString() === id).length,
+        followerCount: sellerFollowerMap[id] || 0,
+      };
+    });
+
+    const trendingAgg = await Order.aggregate([
+      { $match: { deliveryBarangay: buyerBarangay, status: { $ne: 'cancelled' } } },
+      { $unwind: '$items' },
+      { $group: { _id: '$items.product', totalQty: { $sum: '$items.quantity' } } },
+      { $sort: { totalQty: -1 } },
+      { $limit: 10 },
+    ]);
+    const trendingIds = trendingAgg.map((t: any) => t._id);
+    const trendingProductDocs = await Product.find({
+      _id: { $in: trendingIds }, status: 'active', approvalStatus: 'approved',
+    }).populate('seller', 'barangay status').lean() as any[];
+    const trendingDocMap: Record<string, any> = {};
+    trendingProductDocs.forEach((p: any) => { trendingDocMap[p._id.toString()] = p; });
+    trendingProducts = trendingAgg
+      .map((t: any) => trendingDocMap[t._id.toString()])
+      .filter(Boolean)
+      .map((p: any) => ({
+        id: p._id.toString(), name: p.name, price: p.price, originalPrice: p.originalPrice,
+        image: p.image || '🛒', unit: p.unit || 'piece', brgy: p.seller?.barangay || '',
+        sellerVerified: p.seller?.status === 'approved',
+      }));
+  }
+
   // Featured Sellers — top sellers by product count
   const sellersRaw = await Seller.find({}).lean() as any[];
   const sellerProductCounts = await Product.aggregate([
@@ -136,12 +202,6 @@ export default async function Home({
   const sellerRatingMap: Record<string, { avg: number; count: number }> = {};
   sellerReviewAgg.forEach((r: any) => { sellerRatingMap[r._id.toString()] = { avg: r.avg, count: r.count }; });
 
-  const sellerFollowerAgg = await Follow.aggregate([
-    { $group: { _id: '$seller', count: { $sum: 1 } } },
-  ]);
-  const sellerFollowerMap: Record<string, number> = {};
-  sellerFollowerAgg.forEach((f: any) => { sellerFollowerMap[f._id.toString()] = f.count; });
-
   const featuredSellers = sellersRaw
     .map((s: any) => ({
       id: s._id.toString(),
@@ -157,6 +217,58 @@ export default async function Home({
     .filter((s) => s.productCount > 0)
     .sort((a, b) => b.productCount - a.productCount)
     .slice(0, 4);
+
+  // Seller of the Week — highest delivered-order revenue among approved sellers in the
+  // last 7 days, falling back to the top-by-product-count seller if no orders yet.
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const sellerRevenueAgg = await Order.aggregate([
+    { $match: { status: 'delivered', createdAt: { $gte: weekAgo } } },
+    { $group: { _id: '$seller', revenue: { $sum: '$total' } } },
+    { $sort: { revenue: -1 } },
+  ]);
+  const approvedSellerIds = new Set(sellersRaw.filter((s: any) => s.status === 'approved').map((s: any) => s._id.toString()));
+  const topRevenueEntry = sellerRevenueAgg.find((r: any) => approvedSellerIds.has(r._id?.toString()));
+  const sellerOfWeekId = topRevenueEntry?._id?.toString()
+    || featuredSellers.find((s) => approvedSellerIds.has(s.id))?.id;
+  const sellerOfWeekDoc = sellerOfWeekId ? sellersRaw.find((s: any) => s._id.toString() === sellerOfWeekId) : null;
+  const sellerOfWeek = sellerOfWeekDoc ? {
+    id: sellerOfWeekDoc._id.toString(),
+    storeName: sellerOfWeekDoc.storeName,
+    storeLogo: sellerOfWeekDoc.storeLogo,
+    storeBanner: sellerOfWeekDoc.storeBanner,
+    barangay: sellerOfWeekDoc.barangay,
+    storeDescription: sellerOfWeekDoc.storeDescription,
+    productCount: sellerCountMap[sellerOfWeekId!] || 0,
+    rating: sellerRatingMap[sellerOfWeekId!]?.avg ?? null,
+    reviewCount: sellerRatingMap[sellerOfWeekId!]?.count ?? 0,
+    followerCount: sellerFollowerMap[sellerOfWeekId!] || 0,
+  } : null;
+
+  // Community Recommendations — highest-rated products platform-wide (at least one review)
+  const allRatingAgg = await Review.aggregate([
+    { $group: { _id: '$product', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+    { $match: { avg: { $gte: 4 } } },
+    { $sort: { avg: -1, count: -1 } },
+    { $limit: 10 },
+  ]);
+  const recommendedIds = allRatingAgg.map((r: any) => r._id);
+  const recommendedDocs = await Product.find({
+    _id: { $in: recommendedIds }, status: 'active', approvalStatus: 'approved',
+  }).populate('seller', 'barangay status').lean() as any[];
+  const recommendedDocMap: Record<string, any> = {};
+  recommendedDocs.forEach((p: any) => { recommendedDocMap[p._id.toString()] = p; });
+  const recommendedRatingMap: Record<string, { avg: number; count: number }> = {};
+  allRatingAgg.forEach((r: any) => { recommendedRatingMap[r._id.toString()] = { avg: r.avg, count: r.count }; });
+  const communityRecommendations = allRatingAgg
+    .map((r: any) => recommendedDocMap[r._id.toString()])
+    .filter(Boolean)
+    .map((p: any) => ({
+      id: p._id.toString(), name: p.name, price: p.price, originalPrice: p.originalPrice,
+      image: p.image || '🛒', unit: p.unit || 'piece', brgy: p.seller?.barangay || '',
+      sellerVerified: p.seller?.status === 'approved',
+      rating: recommendedRatingMap[p._id.toString()]?.avg ?? null,
+      reviewCount: recommendedRatingMap[p._id.toString()]?.count ?? 0,
+    }));
 
   // Testimonials — most recent reviews that have a written comment
   const testimonialsRaw = await Review.find({ comment: { $exists: true, $ne: '' } })
@@ -185,11 +297,16 @@ export default async function Home({
             </div>
           </div>
         )}
+        {buyerBarangay && <NearbySellers barangay={buyerBarangay} sellers={nearbySellers} />}
+        {buyerBarangay && <ProductsNearYou barangay={buyerBarangay} products={nearbyProducts} />}
         <StatsSection />
         <TodaysDeals deals={deals} />
+        {buyerBarangay && <TrendingInBarangay barangay={buyerBarangay} products={trendingProducts} />}
         <ProductGrid categories={dbCategories} products={dbProducts} activeCategory={category} />
         <FreshToday products={freshProducts} />
+        <CommunityRecommendations products={communityRecommendations} />
         <FeaturedSellers sellers={featuredSellers} />
+        <SellerOfTheWeek seller={sellerOfWeek} />
         <WhyChooseUs />
         <TestimonialsSection reviews={testimonials} />
         <Newsletter />
