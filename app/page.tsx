@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 import HeroBanner from '../components/HeroBanner';
 import ProductGrid from '../components/ProductGrid';
 import StatsSection from '../components/StatsSection';
@@ -175,6 +176,7 @@ export default async function Home({
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 flex flex-col justify-between antialiased">
       <div>
         <Navbar />
+        <AnnouncementBanner />
         <HeroBanner />
         {buyerBarangay && (
           <div className="max-w-7xl mx-auto px-4 mt-6">

@@ -16,6 +16,7 @@ const navItems = [
   { label: 'Coupons', href: '/admin/coupons', icon: '🎟️' },
   { label: 'Subscribers', href: '/admin/subscribers', icon: '📧' },
   { label: 'Payouts', href: '/admin/payouts', icon: '💰' },
+  { label: 'Announcements', href: '/admin/announcements', icon: '📣' },
 ];
 
 export default function AdminSidebar() {
