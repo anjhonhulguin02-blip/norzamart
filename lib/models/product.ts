@@ -14,6 +14,8 @@ const ProductSchema = new Schema(
     stock: { type: Number, required: true, default: 0 },
     tag: { type: String },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
+    approvalStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    rejectionReason: { type: String },
     weight: { type: String },
     origin: { type: String },
     freshUntil: { type: Date },

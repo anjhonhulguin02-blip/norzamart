@@ -13,6 +13,7 @@ export async function GET(req: Request) {
   await connectToDatabase();
   const products = await Product.find({
     status: "active",
+    approvalStatus: "approved",
     name: { $regex: q, $options: "i" },
   })
     .select("name image price unit")

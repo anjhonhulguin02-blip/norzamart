@@ -8,7 +8,7 @@ export async function createNotification({
   link,
 }: {
   userId: string;
-  type: "order_status" | "new_message" | "new_review" | "seller_new_order" | "payout_update";
+  type: "order_status" | "new_message" | "new_review" | "seller_new_order" | "payout_update" | "product_status";
   title: string;
   body?: string;
   link?: string;

@@ -31,6 +31,7 @@ const TYPE_ICON: Record<string, string> = {
   new_review: '⭐',
   seller_new_order: '🛍',
   payout_update: '💰',
+  product_status: '🏷️',
 };
 
 export default function NotificationBell() {

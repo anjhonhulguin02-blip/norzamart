@@ -22,7 +22,7 @@ export async function GET() {
 
   const sellerIds = follows.map((f: any) => f.seller?._id).filter(Boolean);
   const productCounts = await Product.aggregate([
-    { $match: { seller: { $in: sellerIds }, status: "active" } },
+    { $match: { seller: { $in: sellerIds }, status: "active", approvalStatus: "approved" } },
     { $group: { _id: "$seller", count: { $sum: 1 } } },
   ]);
   const countMap: Record<string, number> = {};

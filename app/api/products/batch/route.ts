@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   }
 
   await connectToDatabase();
-  const products = await Product.find({ _id: { $in: ids }, status: "active" })
+  const products = await Product.find({ _id: { $in: ids }, status: "active", approvalStatus: "approved" })
     .populate("seller", "storeName barangay")
     .lean();
 

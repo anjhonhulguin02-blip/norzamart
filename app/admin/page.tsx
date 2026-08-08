@@ -8,6 +8,7 @@ interface Stats {
   sellerCount: number;
   pendingSellerCount: number;
   productCount: number;
+  pendingProductCount: number;
   orderCount: number;
   totalRevenue: number;
 }
@@ -32,6 +33,14 @@ export default function AdminDashboardPage() {
         <Link href="/admin/sellers" className="block mt-5 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 hover:bg-yellow-100 transition-all">
           <p className="text-yellow-700 text-sm font-bold">
             🕓 {stats.pendingSellerCount} seller{stats.pendingSellerCount > 1 ? 's' : ''} awaiting verification →
+          </p>
+        </Link>
+      )}
+
+      {stats.pendingProductCount > 0 && (
+        <Link href="/admin/products" className="block mt-5 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 hover:bg-yellow-100 transition-all">
+          <p className="text-yellow-700 text-sm font-bold">
+            📦 {stats.pendingProductCount} product{stats.pendingProductCount > 1 ? 's' : ''} awaiting approval →
           </p>
         </Link>
       )}

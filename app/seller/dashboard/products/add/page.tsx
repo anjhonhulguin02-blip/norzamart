@@ -245,6 +245,10 @@ export default function AddProductPage() {
             </div>
           </div>
 
+          <p className="md:col-span-2 text-ink/50 text-[11px] text-center -mb-1">
+            New products are reviewed by our team before they appear in the marketplace.
+          </p>
+
           <button type="submit" disabled={isSubmitting}
             className="md:col-span-2 bg-basil hover:bg-basil-light disabled:opacity-60 text-white font-bold py-3.5 rounded-xl shadow-md shadow-basil/20 mt-2 text-sm transition-all">
             {isSubmitting ? 'Saving…' : 'Save Product →'}

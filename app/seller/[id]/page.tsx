@@ -19,7 +19,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
 
   const followerCount = await Follow.countDocuments({ seller: id });
 
-  const products = await Product.find({ seller: id, status: 'active' }).sort({ createdAt: -1 }).lean() as any[];
+  const products = await Product.find({ seller: id, status: 'active', approvalStatus: 'approved' }).sort({ createdAt: -1 }).lean() as any[];
   const productIds = products.map((p: any) => p._id);
   const reviews = await Review.find({ product: { $in: productIds } }).lean() as any[];
 

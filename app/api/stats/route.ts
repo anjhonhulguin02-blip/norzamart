@@ -10,7 +10,7 @@ export async function GET() {
 
   const [sellerCount, productCount, buyerCount, barangayCount] = await Promise.all([
     Seller.countDocuments({}),
-    Product.countDocuments({ status: "active" }),
+    Product.countDocuments({ status: "active", approvalStatus: "approved" }),
     User.countDocuments({}),
     Barangay.countDocuments({}),
   ]);

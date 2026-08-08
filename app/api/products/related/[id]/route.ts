@@ -18,6 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     _id: { $ne: id },
     category: current.category,
     status: "active",
+    approvalStatus: "approved",
   })
     .populate("seller", "storeName barangay")
     .sort({ createdAt: -1 })

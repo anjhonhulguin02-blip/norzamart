@@ -12,11 +12,12 @@ export async function GET() {
 
   await connectToDatabase();
 
-  const [userCount, sellerCount, pendingSellerCount, productCount, orderCount, allOrders] = await Promise.all([
+  const [userCount, sellerCount, pendingSellerCount, productCount, pendingProductCount, orderCount, allOrders] = await Promise.all([
     User.countDocuments({}),
     Seller.countDocuments({}),
     Seller.countDocuments({ status: "pending" }),
     Product.countDocuments({}),
+    Product.countDocuments({ approvalStatus: "pending" }),
     Order.countDocuments({}),
     Order.find({ status: "delivered" }).select("total"),
   ]);
@@ -24,6 +25,6 @@ export async function GET() {
   const totalRevenue = allOrders.reduce((sum, o: any) => sum + o.total, 0);
 
   return NextResponse.json({
-    userCount, sellerCount, pendingSellerCount, productCount, orderCount, totalRevenue,
+    userCount, sellerCount, pendingSellerCount, productCount, pendingProductCount, orderCount, totalRevenue,
   });
 }

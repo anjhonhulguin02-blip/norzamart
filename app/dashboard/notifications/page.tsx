@@ -18,6 +18,7 @@ const TYPE_ICON: Record<string, string> = {
   new_message: '💬',
   new_review: '⭐',
   seller_new_order: '🛍',
+  product_status: '🏷️',
 };
 
 export default function NotificationsPage() {

@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 
   await connectToDatabase();
 
-  const filter: any = { status: "active" };
+  const filter: any = { status: "active", approvalStatus: "approved" };
   if (category) filter.category = category;
   if (q) filter.name = { $regex: q, $options: "i" };
   if (minPrice || maxPrice) {

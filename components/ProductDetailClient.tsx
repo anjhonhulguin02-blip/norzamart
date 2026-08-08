@@ -5,12 +5,16 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { fileToBase64, uploadIfNew } from '@/lib/uploadImage';
 
 interface Review {
   _id: string;
   userName: string;
   rating: number;
   comment?: string;
+  images?: string[];
+  likeCount?: number;
+  likedByMe?: boolean;
   createdAt: string;
 }
 
@@ -73,6 +77,7 @@ export default function ProductDetailClient({
 
   const [myRating, setMyRating] = useState(0);
   const [myComment, setMyComment] = useState('');
+  const [myReviewImages, setMyReviewImages] = useState<string[]>([]);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState('');
 
@@ -169,15 +174,17 @@ export default function ProductDetailClient({
     }
     setSubmittingReview(true);
     try {
+      const uploadedImages = await Promise.all(myReviewImages.map((img) => uploadIfNew(img, 'reviews')));
       const res = await fetch(`/api/products/${productId}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: myRating, comment: myComment }),
+        body: JSON.stringify({ rating: myRating, comment: myComment, images: uploadedImages }),
       });
       const data = await res.json();
       if (res.ok) {
         setMyRating(0);
         setMyComment('');
+        setMyReviewImages([]);
         fetchReviews();
       } else {
         setReviewError(data.message || 'Something went wrong.');
@@ -186,6 +193,35 @@ export default function ProductDetailClient({
       setReviewError('Unable to connect to the server.');
     }
     setSubmittingReview(false);
+  };
+
+  const handleReviewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const encoded = await Promise.all(files.map(fileToBase64));
+    setMyReviewImages((prev) => [...prev, ...encoded].slice(0, 4));
+  };
+
+  const removeReviewImage = (index: number) => {
+    setMyReviewImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleToggleLike = async (reviewId: string) => {
+    if (!session) {
+      router.push('/');
+      return;
+    }
+    setReviews((prev) => prev.map((r) => r._id === reviewId
+      ? { ...r, likedByMe: !r.likedByMe, likeCount: (r.likeCount || 0) + (r.likedByMe ? -1 : 1) }
+      : r));
+    try {
+      const res = await fetch(`/api/reviews/${reviewId}/like`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setReviews((prev) => prev.map((r) => r._id === reviewId ? { ...r, likedByMe: data.liked, likeCount: data.likeCount } : r));
+      }
+    } catch {
+      // ignore, optimistic state stays
+    }
   };
 
   const handleChatClick = async () => {
@@ -427,6 +463,30 @@ export default function ProductDetailClient({
               onChange={(e) => setMyComment(e.target.value)}
               className="w-full bg-white border border-ink/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40"
             />
+
+            {myReviewImages.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {myReviewImages.map((img, i) => (
+                  <div key={i} className="relative w-14 h-14 bg-white border border-ink/10 rounded-lg overflow-hidden">
+                    <img src={img} alt={`Review photo ${i}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeReviewImage(i)}
+                      className="absolute top-0 right-0 bg-tomato text-white w-4 h-4 text-[10px] flex items-center justify-center rounded-bl-md"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-2">
+              <label className="text-xs font-bold text-ink/60 cursor-pointer">
+                📷 Add photos (optional)
+                <input type="file" accept="image/*" multiple onChange={handleReviewImageUpload} className="hidden" />
+              </label>
+            </div>
+
             {reviewError && <p className="text-tomato text-xs font-semibold mt-2">{reviewError}</p>}
             <button
               type="submit"
@@ -451,7 +511,26 @@ export default function ProductDetailClient({
                   <span className="text-yellow-500 text-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
                 </div>
                 {r.comment && <p className="text-ink/70 text-sm font-body mt-1.5">{r.comment}</p>}
-                <p className="text-ink/40 text-[11px] mt-1.5">{timeAgo(r.createdAt)}</p>
+
+                {r.images && r.images.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2.5">
+                    {r.images.map((img, i) => (
+                      <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border border-ink/10 shrink-0">
+                        <img src={img} alt={`Review photo ${i}`} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mt-2.5">
+                  <p className="text-ink/40 text-[11px]">{timeAgo(r.createdAt)}</p>
+                  <button
+                    onClick={() => handleToggleLike(r._id)}
+                    className={`flex items-center gap-1 text-xs font-bold transition-colors ${r.likedByMe ? 'text-basil' : 'text-ink/40 hover:text-basil'}`}
+                  >
+                    {r.likedByMe ? '👍' : '👍🏻'} {r.likeCount || 0}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -6,14 +6,24 @@ import Review from "@/lib/models/review";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await getServerSession(authOptions);
+  const myUserId = session?.user ? (session.user as any).id : null;
+
   await connectToDatabase();
 
-  const reviews = await Review.find({ product: id }).sort({ createdAt: -1 });
+  const reviews = await Review.find({ product: id }).sort({ createdAt: -1 }).lean() as any[];
   const average = reviews.length
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
 
-  return NextResponse.json({ reviews, average, count: reviews.length });
+  const withLikes = reviews.map((r: any) => ({
+    ...r,
+    likeCount: (r.likedBy || []).length,
+    likedByMe: myUserId ? (r.likedBy || []).some((u: any) => u.toString() === myUserId) : false,
+    likedBy: undefined,
+  }));
+
+  return NextResponse.json({ reviews: withLikes, average, count: reviews.length });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ message: "Please log in to leave a review." }, { status: 401 });
     }
 
-    const { rating, comment } = await req.json();
+    const { rating, comment, images } = await req.json();
     if (!rating || rating < 1 || rating > 5) {
       return NextResponse.json({ message: "Please select a rating." }, { status: 400 });
     }
@@ -36,6 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       userName: session.user.name || "Customer",
       rating,
       comment,
+      images,
     });
 
     return NextResponse.json({ message: "Review posted!", review }, { status: 201 });

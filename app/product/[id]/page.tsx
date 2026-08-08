@@ -17,7 +17,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   await connectToDatabase();
   const product = await Product.findById(id).populate('seller', 'storeName barangay deliveryBarangays').lean() as any;
 
-  if (!product || product.status !== 'active') {
+  if (!product || product.status !== 'active' || product.approvalStatus !== 'approved') {
     notFound();
   }
 

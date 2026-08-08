@@ -13,7 +13,15 @@ interface Product {
   image?: string;
   stock: number;
   status: string;
+  approvalStatus: string;
+  rejectionReason?: string;
 }
+
+const APPROVAL_BADGE: Record<string, { label: string; className: string }> = {
+  pending: { label: '⏳ Pending Review', className: 'bg-yellow-100 text-yellow-700' },
+  approved: { label: '✔ Approved', className: 'bg-basil/15 text-basil' },
+  rejected: { label: '✕ Rejected', className: 'bg-tomato/15 text-tomato' },
+};
 
 export default function ProductsListPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -101,6 +109,12 @@ export default function ProductsListPage() {
                   {p.name}
                 </Link>
                 <p className="text-ink/40 text-xs">{p.category}</p>
+                <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${(APPROVAL_BADGE[p.approvalStatus] || APPROVAL_BADGE.pending).className}`}>
+                  {(APPROVAL_BADGE[p.approvalStatus] || APPROVAL_BADGE.pending).label}
+                </span>
+                {p.approvalStatus === 'rejected' && p.rejectionReason && (
+                  <p className="text-tomato text-[11px] mt-1">Reason: {p.rejectionReason}</p>
+                )}
               </div>
 
               <div className="text-right">
