@@ -1,5 +1,16 @@
 import Notification from "@/lib/models/notification";
+import User from "@/lib/models/user";
 import { pusherServer } from "@/lib/pusherServer";
+
+// Only types with a clear match to one of the three profile toggles are gated.
+// new_review and payout_update always send — there's no toggle that cleanly
+// covers "someone reviewed my product" or a financial payout update.
+const PREFERENCE_BY_TYPE: Partial<Record<string, "notifyOrderUpdates" | "notifyChatMessages" | "notifyPromotions">> = {
+  order_status: "notifyOrderUpdates",
+  seller_new_order: "notifyOrderUpdates",
+  product_status: "notifyOrderUpdates",
+  new_message: "notifyChatMessages",
+};
 
 export async function createNotification({
   userId,
@@ -15,6 +26,14 @@ export async function createNotification({
   link?: string;
 }) {
   try {
+    const preferenceKey = PREFERENCE_BY_TYPE[type];
+    if (preferenceKey) {
+      const recipient = await User.findById(userId).select(`settings.${preferenceKey}`);
+      if (recipient && recipient.settings?.[preferenceKey as keyof typeof recipient.settings] === false) {
+        return;
+      }
+    }
+
     const notification = await Notification.create({ user: userId, type, title, body, link });
     await pusherServer.trigger(`private-user-${userId}`, "notification", {
       _id: notification._id.toString(),
