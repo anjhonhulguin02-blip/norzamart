@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { getPusherClient } from '@/lib/pusherClient';
 
 interface Conversation {
   _id: string;
@@ -12,18 +14,36 @@ interface Conversation {
 }
 
 export default function SellerMessagesPage() {
+  const { data: session } = useSession();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const load = async () => {
+    const res = await fetch('/api/chat/conversations');
+    const data = await res.json();
+    setConversations(data.conversations || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
   useEffect(() => {
-    const load = async () => {
-      const res = await fetch('/api/chat/conversations');
-      const data = await res.json();
-      setConversations(data.conversations || []);
-      setLoading(false);
+    const userId = (session?.user as any)?.id;
+    if (!userId) return;
+
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe(`private-user-${userId}`);
+    const handler = (notif: { type: string }) => {
+      if (notif.type === 'new_message') load();
     };
-    load();
-  }, []);
+    channel.bind('notification', handler);
+
+    return () => {
+      channel.unbind('notification', handler);
+      pusher.unsubscribe(`private-user-${userId}`);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(session?.user as any)?.id]);
 
   return (
     <div>

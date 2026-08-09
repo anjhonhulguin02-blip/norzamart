@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import { fileToBase64, uploadIfNew } from '@/lib/uploadImage';
+import { getPusherClient } from '@/lib/pusherClient';
 
 interface Message {
   _id: string;
@@ -67,8 +68,23 @@ export default function ChatThreadPage() {
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000);
+    // Real-time push (below) delivers new messages instantly; this is just a
+    // safety-net refresh in case a push event is ever missed.
+    const interval = setInterval(fetchMessages, 15000);
     return () => clearInterval(interval);
+  }, [conversationId]);
+
+  useEffect(() => {
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe(`private-conversation-${conversationId}`);
+    const handler = () => fetchMessages();
+    channel.bind('message', handler);
+
+    return () => {
+      channel.unbind('message', handler);
+      pusher.unsubscribe(`private-conversation-${conversationId}`);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);

@@ -1,4 +1,5 @@
 import Notification from "@/lib/models/notification";
+import { pusherServer } from "@/lib/pusherServer";
 
 export async function createNotification({
   userId,
@@ -14,7 +15,16 @@ export async function createNotification({
   link?: string;
 }) {
   try {
-    await Notification.create({ user: userId, type, title, body, link });
+    const notification = await Notification.create({ user: userId, type, title, body, link });
+    await pusherServer.trigger(`private-user-${userId}`, "notification", {
+      _id: notification._id.toString(),
+      type,
+      title,
+      body,
+      link,
+      read: false,
+      createdAt: notification.createdAt,
+    });
   } catch (error) {
     console.error("NOTIFICATION CREATE ERROR:", error);
     // Never let a notification failure break the main action

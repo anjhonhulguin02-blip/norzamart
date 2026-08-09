@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import NotificationBell from './NotificationBell';
+import { getPusherClient } from '@/lib/pusherClient';
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -63,7 +64,9 @@ export default function Navbar() {
   useEffect(() => {
     fetchCartCount();
     fetchChatCount();
-    const interval = setInterval(fetchChatCount, 15000);
+    // Real-time push (below) handles instant updates; this is just a safety-net
+    // refresh in case a push event is ever missed.
+    const interval = setInterval(fetchChatCount, 60000);
     window.addEventListener('cart-updated', fetchCartCount);
     return () => {
       clearInterval(interval);
@@ -71,6 +74,24 @@ export default function Navbar() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
+
+  useEffect(() => {
+    const userId = (session?.user as any)?.id;
+    if (!userId) return;
+
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe(`private-user-${userId}`);
+    const handler = (notif: { type: string }) => {
+      if (notif.type === 'new_message') fetchChatCount();
+    };
+    channel.bind('notification', handler);
+
+    return () => {
+      channel.unbind('notification', handler);
+      pusher.unsubscribe(`private-user-${userId}`);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(session?.user as any)?.id]);
 
   useEffect(() => {
     fetch('/api/search/popular')

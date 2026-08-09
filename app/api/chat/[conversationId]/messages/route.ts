@@ -7,6 +7,7 @@ import Message from "@/lib/models/message";
 import Seller from "@/lib/models/seller";
 import User from "@/lib/models/user";
 import { createNotification } from "@/lib/createNotification";
+import { pusherServer } from "@/lib/pusherServer";
 
 void User;
 
@@ -107,6 +108,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ convers
     }
 
     await conversation.save();
+
+    await pusherServer.trigger(`private-conversation-${conversationId}`, "message", message);
 
     // Notify the recipient (the person who did NOT send this message)
     let recipientUserId: string;

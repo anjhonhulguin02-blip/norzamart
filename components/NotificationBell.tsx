@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
+import { getPusherClient } from '@/lib/pusherClient';
+import { useToast } from './ui/Toast';
 
 interface Notif {
   _id: string;
@@ -36,6 +38,7 @@ const TYPE_ICON: Record<string, string> = {
 
 export default function NotificationBell() {
   const { data: session } = useSession();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -54,9 +57,31 @@ export default function NotificationBell() {
 
   useEffect(() => {
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 15000);
+    // Real-time push handles instant updates; this is just a safety-net refresh
+    // in case a push event is ever missed (e.g. a brief disconnect).
+    const interval = setInterval(fetchNotifs, 60000);
     return () => clearInterval(interval);
   }, [session]);
+
+  useEffect(() => {
+    const userId = (session?.user as any)?.id;
+    if (!userId) return;
+
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe(`private-user-${userId}`);
+    const handler = (notif: Notif) => {
+      setNotifs((prev) => [notif, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+      showToast(notif.title, 'success');
+    };
+    channel.bind('notification', handler);
+
+    return () => {
+      channel.unbind('notification', handler);
+      pusher.unsubscribe(`private-user-${userId}`);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(session?.user as any)?.id]);
 
   const handleOpen = async () => {
     setOpen(!open);

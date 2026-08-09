@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
+import { getPusherClient } from '@/lib/pusherClient';
 
 interface Conversation {
   _id: string;
@@ -16,20 +18,38 @@ interface Conversation {
 }
 
 export default function MessagesPage() {
+  const { data: session } = useSession();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [myUserId, setMyUserId] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const load = async () => {
+    const res = await fetch('/api/chat/conversations');
+    const data = await res.json();
+    setConversations(data.conversations || []);
+    setMyUserId(data.myUserId || '');
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
   useEffect(() => {
-    const load = async () => {
-      const res = await fetch('/api/chat/conversations');
-      const data = await res.json();
-      setConversations(data.conversations || []);
-      setMyUserId(data.myUserId || '');
-      setLoading(false);
+    const userId = (session?.user as any)?.id;
+    if (!userId) return;
+
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe(`private-user-${userId}`);
+    const handler = (notif: { type: string }) => {
+      if (notif.type === 'new_message') load();
     };
-    load();
-  }, []);
+    channel.bind('notification', handler);
+
+    return () => {
+      channel.unbind('notification', handler);
+      pusher.unsubscribe(`private-user-${userId}`);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(session?.user as any)?.id]);
 
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
