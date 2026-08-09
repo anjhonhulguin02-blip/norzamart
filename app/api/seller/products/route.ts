@@ -19,6 +19,9 @@ export async function POST(req: Request) {
     if (!seller) {
       return NextResponse.json({ message: "Not authorized." }, { status: 401 });
     }
+    if (seller.status !== "approved") {
+      return NextResponse.json({ message: "Your store must be verified before you can list products." }, { status: 403 });
+    }
 
     const body = await req.json();
     const {

@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import SellerSidebar from "@/components/seller/SellerSidebar";
+import SellerStatusScreen from "@/components/seller/SellerStatusScreen";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import connectToDatabase from "@/lib/mongodb";
 import Seller from "@/lib/models/seller";
@@ -18,6 +19,10 @@ export default async function SellerDashboardLayout({ children }: { children: Re
 
   if (!seller) {
     redirect('/seller/register');
+  }
+
+  if (seller.status !== 'approved') {
+    return <SellerStatusScreen status={seller.status} storeName={seller.storeName} />;
   }
 
   return (
