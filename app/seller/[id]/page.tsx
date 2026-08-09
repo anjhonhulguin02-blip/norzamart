@@ -7,6 +7,44 @@ import Navbar from '@/components/Navbar';
 import FollowButton from '@/components/FollowButton';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  await connectToDatabase();
+  const seller = await Seller.findById(id).select('storeName storeDescription storeLogo barangay status').lean() as any;
+
+  if (!seller || seller.status !== 'approved') {
+    return { title: 'Store Not Found' };
+  }
+
+  const title = seller.storeName;
+  const description = seller.storeDescription
+    ? seller.storeDescription.slice(0, 155)
+    : `Shop fresh groceries from ${seller.storeName}, a local seller in ${seller.barangay}, Norzagaray, on NorzaMart.`;
+
+  // Some store logos are stored as base64 data URIs rather than hosted URLs;
+  // og:image/twitter:image require a fetchable http(s) URL, so skip those and
+  // let the root opengraph-image fallback take over instead.
+  const hasLinkableImage = typeof seller.storeLogo === 'string' && /^https?:\/\//.test(seller.storeLogo);
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      images: [hasLinkableImage ? { url: seller.storeLogo } : { url: '/opengraph-image' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [hasLinkableImage ? seller.storeLogo : '/opengraph-image'],
+    },
+  };
+}
 
 export default async function SellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -20,9 +20,39 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const BASE_URL = process.env.NEXTAUTH_URL || "https://norzamart.vercel.app";
+const SITE_DESCRIPTION =
+  "Fresh vegetables, meat, and daily groceries from local sellers in Norzagaray, Bulacan — delivered same-day.";
+
 export const metadata: Metadata = {
-  title: "NorzaMart",
-  description: "Fresh vegetables, meat, and daily groceries from Norzagaray",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "NorzaMart — Fresh, Local Groceries in Norzagaray",
+    template: "%s | NorzaMart",
+  },
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "Norzagaray",
+    "Bulacan",
+    "grocery delivery",
+    "online palengke",
+    "local marketplace",
+    "sari-sari store online",
+    "fresh produce delivery Philippines",
+  ],
+  openGraph: {
+    title: "NorzaMart — Fresh, Local Groceries in Norzagaray",
+    description: SITE_DESCRIPTION,
+    url: BASE_URL,
+    siteName: "NorzaMart",
+    locale: "en_PH",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NorzaMart — Fresh, Local Groceries in Norzagaray",
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

@@ -8,8 +8,49 @@ import RelatedProducts from '@/components/RelatedProducts';
 import { notFound } from 'next/navigation';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import type { Metadata } from 'next';
 
 void Seller;
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  await connectToDatabase();
+  const product = await Product.findById(id)
+    .select('name description image price unit category approvalStatus')
+    .populate('seller', 'storeName')
+    .lean() as any;
+
+  if (!product || product.approvalStatus !== 'approved') {
+    return { title: 'Product Not Found' };
+  }
+
+  const title = product.name;
+  const description = product.description
+    ? product.description.slice(0, 155)
+    : `${product.name} — ₱${product.price}/${product.unit || 'piece'} from ${product.seller?.storeName || 'a local seller'} on NorzaMart.`;
+
+  // Some product images are stored as base64 data URIs rather than hosted URLs;
+  // og:image/twitter:image require a fetchable http(s) URL, so skip those and
+  // let the root opengraph-image fallback take over instead.
+  const hasLinkableImage = typeof product.image === 'string' && /^https?:\/\//.test(product.image);
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      images: [hasLinkableImage ? { url: product.image } : { url: '/opengraph-image' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [hasLinkableImage ? product.image : '/opengraph-image'],
+    },
+  };
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
