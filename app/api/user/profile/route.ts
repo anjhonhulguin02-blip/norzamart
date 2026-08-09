@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import User from "@/lib/models/user";
+import { invalidImageMessage } from "@/lib/validateImageUrl";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -24,6 +25,11 @@ export async function PUT(req: Request) {
 
     const body = await req.json();
     const { name, phone, avatar, email, settings } = body;
+
+    const imageError = invalidImageMessage(avatar, "Profile photo");
+    if (imageError) {
+      return NextResponse.json({ message: imageError }, { status: 400 });
+    }
 
     await connectToDatabase();
 

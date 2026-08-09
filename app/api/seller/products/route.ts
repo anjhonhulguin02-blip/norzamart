@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Product from "@/lib/models/product";
 import { getSellerFromSession } from "@/lib/getSellerFromSession";
+import { invalidImageMessage, invalidImageArrayMessage } from "@/lib/validateImageUrl";
 
 export async function GET() {
   const seller = await getSellerFromSession();
@@ -31,6 +32,11 @@ export async function POST(req: Request) {
 
     if (!name || !category || price === undefined || stock === undefined) {
       return NextResponse.json({ message: "Please fill in all required fields." }, { status: 400 });
+    }
+
+    const imageError = invalidImageMessage(image, "Product image") || invalidImageArrayMessage(images, "Product images");
+    if (imageError) {
+      return NextResponse.json({ message: imageError }, { status: 400 });
     }
 
     await connectToDatabase();

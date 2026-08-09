@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Seller from "@/lib/models/seller";
+import { invalidImageMessage } from "@/lib/validateImageUrl";
 
 export async function PUT(req: Request) {
   try {
@@ -16,6 +17,11 @@ export async function PUT(req: Request) {
       storeName, storeLogo, storeBanner, ownerName, contactNumber, email, address, barangay,
       storeDescription, deliveryBarangays, businessHours, facebook, instagram, website, estimatedDeliveryTime,
     } = body;
+
+    const imageError = invalidImageMessage(storeLogo, "Store logo") || invalidImageMessage(storeBanner, "Store banner");
+    if (imageError) {
+      return NextResponse.json({ message: imageError }, { status: 400 });
+    }
 
     await connectToDatabase();
     const seller = await Seller.findOneAndUpdate(

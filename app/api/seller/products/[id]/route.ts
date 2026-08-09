@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Product from "@/lib/models/product";
 import { getSellerFromSession } from "@/lib/getSellerFromSession";
+import { invalidImageMessage, invalidImageArrayMessage } from "@/lib/validateImageUrl";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,6 +34,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       name, description, category, price, originalPrice, unit, image, images, stock, tag, status,
       weight, origin, freshUntil, availableBarangays, deliveryFee,
     } = body;
+
+    const imageError = invalidImageMessage(image, "Product image") || invalidImageArrayMessage(images, "Product images");
+    if (imageError) {
+      return NextResponse.json({ message: imageError }, { status: 400 });
+    }
 
     await connectToDatabase();
     const product = await Product.findOneAndUpdate(

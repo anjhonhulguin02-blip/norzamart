@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Seller from "@/lib/models/seller";
 import User from "@/lib/models/user";
+import { invalidImageMessage } from "@/lib/validateImageUrl";
 
 export async function POST(req: Request) {
   try {
@@ -21,6 +22,13 @@ export async function POST(req: Request) {
 
     if (!storeName || !ownerName || !contactNumber || !email || !address || !barangay || !governmentId) {
       return NextResponse.json({ message: "Please fill in all required fields." }, { status: 400 });
+    }
+
+    const imageError = invalidImageMessage(storeLogo, "Store logo")
+      || invalidImageMessage(storeBanner, "Store banner")
+      || invalidImageMessage(governmentId, "Government ID");
+    if (imageError) {
+      return NextResponse.json({ message: imageError }, { status: 400 });
     }
 
     await connectToDatabase();
