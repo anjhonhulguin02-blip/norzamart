@@ -42,15 +42,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Your basket is empty." }, { status: 400 });
     }
 
-    // Validate stock before committing anything
+    // Atomically reserve stock for every item before creating any order. Using
+    // findOneAndUpdate with a stock guard (rather than a separate read-then-write)
+    // prevents two concurrent checkouts from both passing a stale stock check and
+    // overselling the last units of a product.
+    const reserved: { productId: string; quantity: number }[] = [];
+    const rollbackReserved = async () => {
+      for (const r of reserved) {
+        await Product.findByIdAndUpdate(r.productId, { $inc: { stock: r.quantity, soldCount: -r.quantity } });
+      }
+    };
+
     for (const item of cartItems) {
       const product = item.product as any;
-      if (!product || product.stock < item.quantity) {
+      if (!product) {
+        await rollbackReserved();
+        return NextResponse.json({ message: "A product in your basket is no longer available." }, { status: 400 });
+      }
+
+      const updated = await Product.findOneAndUpdate(
+        { _id: product._id, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity, soldCount: item.quantity } },
+        { new: true }
+      );
+
+      if (!updated) {
+        await rollbackReserved();
         return NextResponse.json(
-          { message: `Not enough stock for "${product?.name || 'a product'}".` },
+          { message: `Not enough stock for "${product.name}".` },
           { status: 400 }
         );
       }
+
+      reserved.push({ productId: product._id.toString(), quantity: item.quantity });
     }
 
     // Group cart items by seller
@@ -72,6 +96,7 @@ export async function POST(req: Request) {
     if (couponCode) {
       const result = await validateCoupon(couponCode, cartSubtotal);
       if (result.error) {
+        await rollbackReserved();
         return NextResponse.json({ message: result.error }, { status: 400 });
       }
       appliedCoupon = result.coupon;
@@ -79,66 +104,67 @@ export async function POST(req: Request) {
     }
 
     const createdOrders = [];
-    const sellerEntries = Array.from(bySeller.entries());
-    let discountAssigned = 0;
 
-    for (let i = 0; i < sellerEntries.length; i++) {
-      const [sellerId, items] = sellerEntries[i];
-      const subtotal = items.reduce((sum, item) => sum + (item.product as any).price * item.quantity, 0);
-      const feeOverrides = items
-        .map((item) => (item.product as any).deliveryFee)
-        .filter((fee) => fee !== undefined && fee !== null);
-      const deliveryFee = subtotal >= 500 ? 0 : feeOverrides.length > 0 ? Math.max(...feeOverrides) : 50;
+    try {
+      const sellerEntries = Array.from(bySeller.entries());
+      let discountAssigned = 0;
 
-      // Give the last group whatever discount remains, so rounding never leaves a stray centavo unassigned.
-      const isLast = i === sellerEntries.length - 1;
-      const groupDiscount = totalDiscount === 0 ? 0 : isLast
-        ? Math.round((totalDiscount - discountAssigned) * 100) / 100
-        : Math.round((totalDiscount * (subtotal / cartSubtotal)) * 100) / 100;
-      discountAssigned += groupDiscount;
+      for (let i = 0; i < sellerEntries.length; i++) {
+        const [sellerId, items] = sellerEntries[i];
+        const subtotal = items.reduce((sum, item) => sum + (item.product as any).price * item.quantity, 0);
+        const feeOverrides = items
+          .map((item) => (item.product as any).deliveryFee)
+          .filter((fee) => fee !== undefined && fee !== null);
+        const deliveryFee = subtotal >= 500 ? 0 : feeOverrides.length > 0 ? Math.max(...feeOverrides) : 50;
 
-      const total = subtotal + deliveryFee - groupDiscount;
+        // Give the last group whatever discount remains, so rounding never leaves a stray centavo unassigned.
+        const isLast = i === sellerEntries.length - 1;
+        const groupDiscount = totalDiscount === 0 ? 0 : isLast
+          ? Math.round((totalDiscount - discountAssigned) * 100) / 100
+          : Math.round((totalDiscount * (subtotal / cartSubtotal)) * 100) / 100;
+        discountAssigned += groupDiscount;
 
-      const order = await Order.create({
-        buyer: userId,
-        seller: sellerId,
-        items: items.map((item) => ({
-          product: (item.product as any)._id,
-          name: (item.product as any).name,
-          price: (item.product as any).price,
-          quantity: item.quantity,
-          unit: (item.product as any).unit || "piece",
-          image: (item.product as any).image,
-        })),
-        subtotal,
-        deliveryFee,
-        couponCode: appliedCoupon ? appliedCoupon.code : undefined,
-        discountAmount: groupDiscount,
-        total,
-        paymentMethod: paymentMethod || "cod",
-        deliveryAddress,
-        deliveryBarangay,
-      });
+        const total = subtotal + deliveryFee - groupDiscount;
 
-      createdOrders.push(order._id.toString());
-
-      const sellerDoc = await Seller.findById(sellerId);
-      if (sellerDoc) {
-        await createNotification({
-          userId: sellerDoc.user.toString(),
-          type: "seller_new_order",
-          title: "New order received!",
-          body: `Order #${order._id.toString().slice(-6).toUpperCase()} — ₱${total.toFixed(2)}`,
-          link: `/seller/dashboard/orders/${order._id}`,
+        const order = await Order.create({
+          buyer: userId,
+          seller: sellerId,
+          items: items.map((item) => ({
+            product: (item.product as any)._id,
+            name: (item.product as any).name,
+            price: (item.product as any).price,
+            quantity: item.quantity,
+            unit: (item.product as any).unit || "piece",
+            image: (item.product as any).image,
+          })),
+          subtotal,
+          deliveryFee,
+          couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+          discountAmount: groupDiscount,
+          total,
+          paymentMethod: paymentMethod || "cod",
+          deliveryAddress,
+          deliveryBarangay,
         });
-      }
 
-      // Decrement stock and track units sold for each item
-      for (const item of items) {
-        await Product.findByIdAndUpdate((item.product as any)._id, {
-          $inc: { stock: -item.quantity, soldCount: item.quantity },
-        });
+        createdOrders.push(order._id.toString());
+
+        const sellerDoc = await Seller.findById(sellerId);
+        if (sellerDoc) {
+          await createNotification({
+            userId: sellerDoc.user.toString(),
+            type: "seller_new_order",
+            title: "New order received!",
+            body: `Order #${order._id.toString().slice(-6).toUpperCase()} — ₱${total.toFixed(2)}`,
+            link: `/seller/dashboard/orders/${order._id}`,
+          });
+        }
       }
+    } catch (err) {
+      // Stock was already reserved atomically above; if order creation fails partway,
+      // put it back rather than leaving stock decremented with no order to show for it.
+      await rollbackReserved();
+      throw err;
     }
 
     if (!buyNow?.productId) {
