@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Review from "@/lib/models/review";
+import Order from "@/lib/models/order";
+import { invalidImageArrayMessage } from "@/lib/validateImageUrl";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,14 +41,40 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ message: "Please select a rating." }, { status: 400 });
     }
 
+    const imageError = invalidImageArrayMessage(images, "Review photos");
+    if (imageError) {
+      return NextResponse.json({ message: imageError }, { status: 400 });
+    }
+
     await connectToDatabase();
+
+    const userId = (session.user as any).id;
+
+    const existingReview = await Review.findOne({ product: id, user: userId });
+    if (existingReview) {
+      return NextResponse.json({ message: "You've already reviewed this product." }, { status: 400 });
+    }
+
+    const hasDeliveredOrder = await Order.exists({
+      buyer: userId,
+      status: "delivered",
+      "items.product": id,
+    });
+    if (!hasDeliveredOrder) {
+      return NextResponse.json(
+        { message: "You can only review products from an order that's been delivered to you." },
+        { status: 403 }
+      );
+    }
+
     const review = await Review.create({
       product: id,
-      user: (session.user as any).id,
+      user: userId,
       userName: session.user.name || "Customer",
       rating,
       comment,
       images,
+      verifiedPurchase: true,
     });
 
     return NextResponse.json({ message: "Review posted!", review }, { status: 201 });

@@ -9,6 +9,7 @@ const ReviewSchema = new Schema(
     comment: { type: String },
     images: { type: [String], default: [] },
     likedBy: { type: [Schema.Types.ObjectId], ref: "User", default: [] },
+    verifiedPurchase: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

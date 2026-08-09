@@ -15,6 +15,7 @@ interface Review {
   images?: string[];
   likeCount?: number;
   likedByMe?: boolean;
+  verifiedPurchase?: boolean;
   createdAt: string;
 }
 
@@ -525,7 +526,12 @@ export default function ProductDetailClient({
             {reviews.map((r) => (
               <div key={r._id} className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-ink">{r.userName}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-ink">{r.userName}</span>
+                    {r.verifiedPurchase && (
+                      <span className="text-basil text-[10px] font-bold bg-basil/10 px-1.5 py-0.5 rounded-full">✔️ Verified Purchase</span>
+                    )}
+                  </div>
                   <span className="text-yellow-500 text-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
                 </div>
                 {r.comment && <p className="text-ink/70 text-sm font-body mt-1.5">{r.comment}</p>}

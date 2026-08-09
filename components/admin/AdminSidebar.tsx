@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Sellers', href: '/admin/sellers', icon: '🏬' },
   { label: 'Products', href: '/admin/products', icon: '📦' },
   { label: 'Orders', href: '/admin/orders', icon: '🧾' },
+  { label: 'Reviews', href: '/admin/reviews', icon: '⭐' },
   { label: 'Analytics', href: '/admin/analytics', icon: '📈' },
   { label: 'Categories', href: '/admin/categories', icon: '🗂️' },
   { label: 'Barangays', href: '/admin/barangays', icon: '📍' },
