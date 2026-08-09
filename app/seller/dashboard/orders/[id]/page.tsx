@@ -20,7 +20,12 @@ interface OrderDetail {
   deliveryAddress: string;
   deliveryBarangay: string;
   createdAt: string;
+  cancelReason?: string;
+  refundReason?: string;
+  resolutionNote?: string;
 }
+
+const PENDING_REQUEST_STATUSES = ["cancellation_requested", "refund_requested"];
 
 export default function SellerOrderDetailPage() {
   const params = useParams();
@@ -31,6 +36,8 @@ export default function SellerOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
+  const [showRejectNote, setShowRejectNote] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
 
   const fetchOrder = async () => {
     const res = await fetch(`/api/orders/${id}`);
@@ -60,12 +67,33 @@ export default function SellerOrderDetailPage() {
     setUpdating(false);
   };
 
+  const resolveRequest = async (action: 'approve' | 'reject', note?: string) => {
+    setUpdating(true);
+    setError('');
+    const res = await fetch(`/api/seller/orders/${id}/resolve`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, note }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.message || 'Something went wrong.');
+    } else {
+      setShowRejectNote(false);
+      setRejectNote('');
+      fetchOrder();
+    }
+    setUpdating(false);
+  };
+
   if (loading) return <p className="text-ink/50 text-sm font-body">Loading order…</p>;
   if (!order) return <p className="text-tomato text-sm font-body">Order not found.</p>;
 
   const currentIndex = FLOW.indexOf(order.status);
   const nextStatus = currentIndex >= 0 && currentIndex < FLOW.length - 1 ? FLOW[currentIndex + 1] : null;
   const isFinal = order.status === 'delivered' || order.status === 'cancelled';
+  const isPendingRequest = PENDING_REQUEST_STATUSES.includes(order.status);
+  const isRefundRequest = order.status === 'refund_requested';
 
   return (
     <div>
@@ -114,7 +142,52 @@ export default function SellerOrderDetailPage() {
             <p className="text-ink/50 text-xs mt-2">Payment: {order.paymentMethod === 'cod' ? 'Cash on Delivery' : order.paymentMethod === 'gcash' ? 'GCash' : 'Bank Transfer'}</p>
           </div>
 
-          {!isFinal && (
+          {isPendingRequest && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+              <h2 className="font-display text-lg font-semibold text-amber-800 mb-2">
+                {isRefundRequest ? 'Refund Requested' : 'Cancellation Requested'}
+              </h2>
+              <p className="text-amber-700 text-sm font-body mb-4">
+                "{isRefundRequest ? order.refundReason : order.cancelReason}"
+              </p>
+              {error && <p className="text-tomato text-xs font-semibold mb-3">{error}</p>}
+
+              {showRejectNote ? (
+                <>
+                  <textarea
+                    value={rejectNote}
+                    onChange={(e) => setRejectNote(e.target.value)}
+                    placeholder="Optional note to the buyer explaining why…"
+                    rows={2}
+                    className="w-full bg-white border border-ink/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40 mb-3"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => resolveRequest('reject', rejectNote)} disabled={updating}
+                      className="bg-tomato hover:bg-tomato/90 disabled:opacity-50 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition-all">
+                      {updating ? 'Submitting…' : 'Confirm Decline'}
+                    </button>
+                    <button onClick={() => { setShowRejectNote(false); setRejectNote(''); }}
+                      className="text-ink/50 hover:text-ink font-bold text-xs px-4 py-2.5 rounded-lg transition-all">
+                      Back
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => resolveRequest('approve')} disabled={updating}
+                    className="bg-basil hover:bg-basil-light disabled:opacity-50 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition-all">
+                    {updating ? 'Submitting…' : `Approve ${isRefundRequest ? 'Refund' : 'Cancellation'}`}
+                  </button>
+                  <button onClick={() => setShowRejectNote(true)} disabled={updating}
+                    className="bg-white hover:bg-ink/5 border border-ink/10 text-ink font-bold text-xs px-5 py-2.5 rounded-lg transition-all">
+                    Decline
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isFinal && !isPendingRequest && (
             <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm">
               <h2 className="font-display text-lg font-semibold text-basil mb-3">Update Status</h2>
               {error && <p className="text-tomato text-xs font-semibold mb-3">{error}</p>}
@@ -136,7 +209,13 @@ export default function SellerOrderDetailPage() {
 
         <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm h-max">
           <h2 className="font-display text-lg font-semibold text-basil mb-4">Order Status</h2>
-          <OrderTimeline status={order.status} statusHistory={order.statusHistory} />
+          <OrderTimeline
+            status={order.status}
+            statusHistory={order.statusHistory}
+            cancelReason={order.cancelReason}
+            refundReason={order.refundReason}
+            resolutionNote={order.resolutionNote}
+          />
         </div>
       </div>
     </div>

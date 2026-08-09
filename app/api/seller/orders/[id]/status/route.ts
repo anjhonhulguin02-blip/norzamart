@@ -42,7 +42,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ message: "Order not found." }, { status: 404 });
     }
 
-    if (order.status === "delivered" || order.status === "cancelled") {
+    if (["delivered", "cancelled", "refunded", "cancellation_requested", "refund_requested"].includes(order.status)) {
       return NextResponse.json({ message: "This order can no longer be updated." }, { status: 400 });
     }
 

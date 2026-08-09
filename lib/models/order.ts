@@ -32,7 +32,10 @@ const OrderSchema = new Schema(
     total: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["pending", "accepted", "preparing", "packed", "out_for_delivery", "delivered", "cancelled"],
+      enum: [
+        "pending", "accepted", "preparing", "packed", "out_for_delivery", "delivered",
+        "cancelled", "cancellation_requested", "refund_requested", "refunded",
+      ],
       default: "pending",
     },
     paymentMethod: { type: String, enum: ["cod", "gcash", "bank"], default: "cod" },
@@ -42,6 +45,10 @@ const OrderSchema = new Schema(
       type: [StatusHistorySchema],
       default: () => [{ status: "pending", at: new Date() }],
     },
+    previousStatus: { type: String },
+    cancelReason: { type: String },
+    refundReason: { type: String },
+    resolutionNote: { type: String },
   },
   { timestamps: true }
 );

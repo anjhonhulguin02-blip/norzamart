@@ -28,7 +28,13 @@ export default function SellerOrdersPage() {
     load();
   }, []);
 
-  const filtered = filter === 'all' ? orders : orders.filter((o) => o.status === filter);
+  const pendingRequestCount = orders.filter((o) => o.status === 'cancellation_requested' || o.status === 'refund_requested').length;
+
+  const filtered = filter === 'all'
+    ? orders
+    : filter === 'requests'
+    ? orders.filter((o) => o.status === 'cancellation_requested' || o.status === 'refund_requested')
+    : orders.filter((o) => o.status === filter);
 
   return (
     <div>
@@ -36,7 +42,7 @@ export default function SellerOrdersPage() {
       <p className="text-ink/60 text-sm font-body mt-1">Manage incoming orders from customers.</p>
 
       <div className="flex gap-2 mt-5 overflow-x-auto pb-1">
-        {['all', 'pending', 'accepted', 'preparing', 'packed', 'out_for_delivery', 'delivered', 'cancelled'].map((f) => (
+        {['all', 'requests', 'pending', 'accepted', 'preparing', 'packed', 'out_for_delivery', 'delivered', 'cancelled', 'refunded'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -44,7 +50,7 @@ export default function SellerOrdersPage() {
               filter === f ? 'bg-basil text-white' : 'bg-white/60 text-ink/60 hover:bg-basil/5'
             }`}
           >
-            {f === 'all' ? 'All' : f.replace('_', ' ')}
+            {f === 'all' ? 'All' : f === 'requests' ? `Requests${pendingRequestCount > 0 ? ` (${pendingRequestCount})` : ''}` : f.replace('_', ' ')}
           </button>
         ))}
       </div>

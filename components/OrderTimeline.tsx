@@ -7,12 +7,44 @@ const STEPS = [
   { key: "delivered", label: "Delivered", icon: "🏠" },
 ];
 
-export default function OrderTimeline({ status, statusHistory }: { status: string; statusHistory: { status: string; at: string }[] }) {
+interface OrderTimelineProps {
+  status: string;
+  statusHistory: { status: string; at: string }[];
+  cancelReason?: string;
+  refundReason?: string;
+  resolutionNote?: string;
+}
+
+export default function OrderTimeline({ status, statusHistory, cancelReason, refundReason, resolutionNote }: OrderTimelineProps) {
   if (status === "cancelled") {
     return (
       <div className="bg-tomato/10 border border-tomato/20 rounded-2xl p-5 text-center">
         <span className="text-2xl block mb-1">✕</span>
         <p className="text-tomato font-bold text-sm">This order was cancelled.</p>
+        {resolutionNote && <p className="text-tomato/70 text-xs mt-1">{resolutionNote}</p>}
+      </div>
+    );
+  }
+
+  if (status === "refunded") {
+    return (
+      <div className="bg-gray-100 border border-gray-200 rounded-2xl p-5 text-center">
+        <span className="text-2xl block mb-1">↩️</span>
+        <p className="text-gray-700 font-bold text-sm">This order was refunded.</p>
+        {resolutionNote && <p className="text-gray-500 text-xs mt-1">{resolutionNote}</p>}
+      </div>
+    );
+  }
+
+  if (status === "cancellation_requested" || status === "refund_requested") {
+    const isRefund = status === "refund_requested";
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+        <span className="text-2xl block mb-1">⏳</span>
+        <p className="text-amber-700 font-bold text-sm">
+          {isRefund ? "Refund requested" : "Cancellation requested"} — waiting for the seller's response.
+        </p>
+        <p className="text-amber-600/80 text-xs mt-1">"{isRefund ? refundReason : cancelReason}"</p>
       </div>
     );
   }

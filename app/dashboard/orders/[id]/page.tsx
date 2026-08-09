@@ -20,7 +20,12 @@ interface OrderDetail {
   deliveryAddress: string;
   deliveryBarangay: string;
   createdAt: string;
+  cancelReason?: string;
+  refundReason?: string;
+  resolutionNote?: string;
 }
+
+const CANCELLABLE_WITH_REASON = ["accepted", "preparing", "packed", "out_for_delivery"];
 
 export default function BuyerOrderDetailPage() {
   const params = useParams();
@@ -32,6 +37,10 @@ export default function BuyerOrderDetailPage() {
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [reasonMode, setReasonMode] = useState<'cancel' | 'refund' | null>(null);
+  const [reasonText, setReasonText] = useState('');
+  const [submittingReason, setSubmittingReason] = useState(false);
+  const [reasonError, setReasonError] = useState('');
 
   const fetchOrder = async () => {
     const res = await fetch(`/api/orders/${id}`);
@@ -55,6 +64,30 @@ export default function BuyerOrderDetailPage() {
       fetchOrder();
     }
     setCancelling(false);
+  };
+
+  const handleSubmitReason = async () => {
+    if (!reasonText.trim()) {
+      setReasonError('Please tell the seller why.');
+      return;
+    }
+    setSubmittingReason(true);
+    setReasonError('');
+    const endpoint = reasonMode === 'refund' ? `/api/orders/${id}/refund` : `/api/orders/${id}/cancel`;
+    const res = await fetch(endpoint, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reasonText.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setReasonError(data.message || 'Something went wrong.');
+    } else {
+      setReasonMode(null);
+      setReasonText('');
+      fetchOrder();
+    }
+    setSubmittingReason(false);
   };
 
   if (loading) return <p className="text-ink/50 text-sm font-body">Loading order…</p>;
@@ -121,11 +154,54 @@ export default function BuyerOrderDetailPage() {
               </button>
             </div>
           )}
+
+          {(CANCELLABLE_WITH_REASON.includes(order.status) || order.status === 'delivered') && (
+            <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm">
+              {reasonMode ? (
+                <>
+                  <h2 className="font-display text-sm font-semibold text-ink mb-2">
+                    {reasonMode === 'refund' ? 'Why would you like a refund?' : 'Why would you like to cancel?'}
+                  </h2>
+                  {reasonError && <p className="text-tomato text-xs font-semibold mb-2">{reasonError}</p>}
+                  <textarea
+                    value={reasonText}
+                    onChange={(e) => setReasonText(e.target.value)}
+                    placeholder="Tell the seller what happened…"
+                    rows={3}
+                    className="w-full bg-white border border-ink/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40"
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={handleSubmitReason} disabled={submittingReason}
+                      className="bg-tomato hover:bg-tomato/90 disabled:opacity-50 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition-all">
+                      {submittingReason ? 'Submitting…' : `Submit ${reasonMode === 'refund' ? 'Refund Request' : 'Cancellation Request'}`}
+                    </button>
+                    <button onClick={() => { setReasonMode(null); setReasonText(''); setReasonError(''); }}
+                      className="text-ink/50 hover:text-ink font-bold text-xs px-4 py-2.5 rounded-lg transition-all">
+                      Never mind
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => setReasonMode(order.status === 'delivered' ? 'refund' : 'cancel')}
+                  className="bg-tomato/10 hover:bg-tomato/20 text-tomato font-bold text-xs px-5 py-2.5 rounded-lg transition-all"
+                >
+                  {order.status === 'delivered' ? 'Request a Refund' : 'Request Cancellation'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm h-max">
           <h2 className="font-display text-lg font-semibold text-basil mb-4">Order Status</h2>
-          <OrderTimeline status={order.status} statusHistory={order.statusHistory} />
+          <OrderTimeline
+            status={order.status}
+            statusHistory={order.statusHistory}
+            cancelReason={order.cancelReason}
+            refundReason={order.refundReason}
+            resolutionNote={order.resolutionNote}
+          />
         </div>
       </div>
 

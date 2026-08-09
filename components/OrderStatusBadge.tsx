@@ -6,6 +6,9 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   out_for_delivery: { label: "Out for Delivery", className: "bg-orange-100 text-orange-700" },
   delivered: { label: "Delivered", className: "bg-basil/15 text-basil" },
   cancelled: { label: "Cancelled", className: "bg-tomato/15 text-tomato" },
+  cancellation_requested: { label: "Cancellation Requested", className: "bg-amber-100 text-amber-700" },
+  refund_requested: { label: "Refund Requested", className: "bg-amber-100 text-amber-700" },
+  refunded: { label: "Refunded", className: "bg-gray-200 text-gray-700" },
 };
 
 export default function OrderStatusBadge({ status }: { status: string }) {
