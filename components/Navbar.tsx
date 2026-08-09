@@ -454,7 +454,18 @@ export default function Navbar() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Password</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-700">Password</label>
+                  {authView === 'login' && (
+                    <Link
+                      href="/forgot-password"
+                      onClick={() => setIsModalOpen(false)}
+                      className="text-[11px] font-bold text-emerald-700 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  )}
+                </div>
                 <input
                   type="password"
                   required

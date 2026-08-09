@@ -8,6 +8,8 @@ const UserSchema = new mongoose.Schema({
   status: { type: String, default: 'active', enum: ['active', 'banned'] },
   avatar: { type: String },
   phone: { type: String },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
   settings: {
     address: { type: String, default: '' },
     barangay: { type: String, default: '' },
