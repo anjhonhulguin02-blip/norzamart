@@ -7,6 +7,7 @@ import Product from "@/lib/models/product";
 import Order from "@/lib/models/order";
 import Seller from "@/lib/models/seller";
 import Coupon from "@/lib/models/coupon";
+import User from "@/lib/models/user";
 import { createNotification } from "@/lib/createNotification";
 import { validateCoupon } from "@/lib/validateCoupon";
 
@@ -25,6 +26,14 @@ export async function POST(req: Request) {
     await connectToDatabase();
 
     const userId = (session.user as any).id;
+
+    const buyer = await User.findById(userId).select("emailVerified");
+    if (!buyer?.emailVerified) {
+      return NextResponse.json(
+        { message: "Please verify your email before placing an order.", requiresVerification: true },
+        { status: 403 }
+      );
+    }
 
     // "Buy Now" checks out a single product directly, bypassing the persistent basket.
     let cartItems: { product: any; quantity: number }[];

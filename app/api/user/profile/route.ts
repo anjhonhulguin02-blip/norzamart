@@ -33,6 +33,8 @@ export async function PUT(req: Request) {
 
     await connectToDatabase();
 
+    const current = await User.findById((session.user as any).id);
+
     if (email) {
       const existing = await User.findOne({ email, _id: { $ne: (session.user as any).id } });
       if (existing) {
@@ -44,10 +46,13 @@ export async function PUT(req: Request) {
     if (name !== undefined) updatePayload.name = name;
     if (phone !== undefined) updatePayload.phone = phone;
     if (avatar !== undefined) updatePayload.avatar = avatar;
-    if (email !== undefined) updatePayload.email = email;
+    if (email !== undefined && email !== current?.email) {
+      updatePayload.email = email;
+      // A changed email hasn't been verified yet — don't carry over the old verification.
+      updatePayload.emailVerified = false;
+    }
 
     if (settings) {
-      const current = await User.findById((session.user as any).id);
       updatePayload.settings = { ...(current?.settings?.toObject?.() || current?.settings || {}), ...settings };
     }
 

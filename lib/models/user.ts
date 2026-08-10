@@ -10,6 +10,9 @@ const UserSchema = new mongoose.Schema({
   phone: { type: String },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  emailVerified: { type: Boolean, default: false },
+  verificationToken: { type: String },
+  verificationExpires: { type: Date },
   settings: {
     address: { type: String, default: '' },
     barangay: { type: String, default: '' },

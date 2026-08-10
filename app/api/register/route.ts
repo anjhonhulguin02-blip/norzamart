@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/lib/models/user';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { sendVerificationEmail } from '@/lib/sendVerificationEmail';
 
 export async function POST(req: Request) {
   try {
@@ -25,12 +26,19 @@ export async function POST(req: Request) {
     // role is intentionally never taken from the request body — self-registration
     // always creates a buyer account. Sellers are promoted via /api/seller/register,
     // and admin accounts are only ever created by direct database access.
-    await User.create({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
       role: 'buyer',
     });
+
+    try {
+      await sendVerificationEmail(user);
+    } catch (emailError) {
+      console.error('VERIFICATION EMAIL SEND ERROR:', emailError);
+      // Don't fail registration over a mail hiccup — they can use "Resend" later.
+    }
 
     return NextResponse.json({ message: 'User successfully created!' }, { status: 201 });
   } catch (error) {

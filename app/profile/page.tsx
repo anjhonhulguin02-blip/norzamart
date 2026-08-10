@@ -40,6 +40,8 @@ export default function ProfileSettingsPage() {
 
   const [user, setUser] = useState<any>(null);
   const [personal, setPersonal] = useState({ name: '', email: '', phone: '' });
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState({ address: '', barangay: '' });
   const [delivery, setDelivery] = useState({ preferredDeliveryTime: 'anytime', contactlessDelivery: false, deliveryNotes: '' });
@@ -311,6 +313,37 @@ export default function ProfileSettingsPage() {
                       <label className="block text-xs font-bold text-ink/70 mb-1">Email Address</label>
                       <input type="email" required value={personal.email} onChange={(e) => setPersonal({ ...personal, email: e.target.value })}
                         className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+                      {user && (
+                        user.emailVerified ? (
+                          <p className="text-basil text-xs font-semibold mt-1.5">✔️ Verified</p>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <p className="text-amber-600 text-xs font-semibold">⚠️ Not verified — required to place orders.</p>
+                            {resendMessage ? (
+                              <span className="text-basil text-xs font-semibold">{resendMessage}</span>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={resendingVerification}
+                                onClick={async () => {
+                                  setResendingVerification(true);
+                                  try {
+                                    const res = await fetch('/api/auth/resend-verification', { method: 'POST' });
+                                    const data = await res.json();
+                                    setResendMessage(data.message);
+                                  } catch {
+                                    setResendMessage('Unable to connect to the server.');
+                                  }
+                                  setResendingVerification(false);
+                                }}
+                                className="text-basil text-xs font-bold underline disabled:opacity-50"
+                              >
+                                {resendingVerification ? 'Sending…' : 'Resend email'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      )}
                     </div>
 
                     <div>

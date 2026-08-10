@@ -33,6 +33,9 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState('');
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   const [form, setForm] = useState({ deliveryAddress: '', deliveryBarangay: '', paymentMethod: 'cod' });
   const [barangays, setBarangays] = useState<{ _id: string; name: string }[]>([]);
@@ -153,6 +156,8 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setRequiresVerification(false);
+    setResendMessage('');
     setPlacing(true);
 
     try {
@@ -165,6 +170,7 @@ export default function CheckoutPage() {
 
       if (!res.ok) {
         setError(data.message || 'Something went wrong.');
+        setRequiresVerification(!!data.requiresVerification);
         setPlacing(false);
         return;
       }
@@ -333,7 +339,33 @@ export default function CheckoutPage() {
             </div>
 
             {error && (
-              <p className="text-tomato text-xs font-semibold mb-3 text-center">{error}</p>
+              <div className="mb-3 text-center">
+                <p className="text-tomato text-xs font-semibold">{error}</p>
+                {requiresVerification && (
+                  resendMessage ? (
+                    <p className="text-basil text-xs font-semibold mt-1">{resendMessage}</p>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={resendingVerification}
+                      onClick={async () => {
+                        setResendingVerification(true);
+                        try {
+                          const res = await fetch('/api/auth/resend-verification', { method: 'POST' });
+                          const data = await res.json();
+                          setResendMessage(data.message);
+                        } catch {
+                          setResendMessage('Unable to connect to the server.');
+                        }
+                        setResendingVerification(false);
+                      }}
+                      className="text-basil text-xs font-bold underline mt-1 disabled:opacity-50"
+                    >
+                      {resendingVerification ? 'Sending…' : 'Resend verification email'}
+                    </button>
+                  )
+                )}
+              </div>
             )}
 
             <button type="submit" disabled={placing}
