@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/lib/models/user';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, role } = await req.json();
+    const { allowed, retryAfterMs } = await checkRateLimit(`register:${getClientIp(req)}`, 5, 60 * 60 * 1000);
+    if (!allowed) {
+      const minutes = Math.ceil(retryAfterMs / 60000);
+      return NextResponse.json({ message: `Too many registration attempts. Please try again in ${minutes} minute${minutes === 1 ? '' : 's'}.` }, { status: 429 });
+    }
+
+    const { name, email, password } = await req.json();
     await connectToDatabase();
 
     const existingUser = await User.findOne({ email });
@@ -15,11 +22,14 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // role is intentionally never taken from the request body — self-registration
+    // always creates a buyer account. Sellers are promoted via /api/seller/register,
+    // and admin accounts are only ever created by direct database access.
     await User.create({
       name,
       email,
       password: hashedPassword,
-      role: role || 'buyer'
+      role: 'buyer',
     });
 
     return NextResponse.json({ message: 'User successfully created!' }, { status: 201 });

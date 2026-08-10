@@ -5,6 +5,7 @@ import connectToDatabase from "@/lib/mongodb";
 import Review from "@/lib/models/review";
 import Order from "@/lib/models/order";
 import { invalidImageArrayMessage } from "@/lib/validateImageUrl";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,6 +35,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ message: "Please log in to leave a review." }, { status: 401 });
+    }
+
+    const { allowed, retryAfterMs } = await checkRateLimit(`review:${(session.user as any).id}`, 10, 60 * 60 * 1000);
+    if (!allowed) {
+      const minutes = Math.ceil(retryAfterMs / 60000);
+      return NextResponse.json({ message: `You're posting reviews too quickly. Please try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` }, { status: 429 });
     }
 
     const { rating, comment, images } = await req.json();

@@ -3,6 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import User from "@/lib/models/user";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -14,6 +15,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         await connectToDatabase();
+
+        const email = (credentials?.email || "").toLowerCase().trim();
+        const { allowed, retryAfterMs } = await checkRateLimit(`login:${email}`, 8, 10 * 60 * 1000);
+        if (!allowed) {
+          const minutes = Math.ceil(retryAfterMs / 60000);
+          throw new Error(`Too many login attempts. Please try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
+        }
 
         const user = await User.findOne({ email: credentials?.email });
         if (!user) {
