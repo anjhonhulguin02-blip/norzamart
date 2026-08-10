@@ -16,6 +16,7 @@ export async function PUT(req: Request) {
     const {
       storeName, storeLogo, storeBanner, ownerName, contactNumber, email, address, barangay,
       storeDescription, deliveryBarangays, businessHours, facebook, instagram, website, estimatedDeliveryTime,
+      gcashNumber, gcashName, bankName, bankAccountNumber, bankAccountName,
     } = body;
 
     const imageError = invalidImageMessage(storeLogo, "Store logo") || invalidImageMessage(storeBanner, "Store banner");
@@ -29,6 +30,7 @@ export async function PUT(req: Request) {
       {
         storeName, storeLogo, storeBanner, ownerName, contactNumber, email, address, barangay,
         storeDescription, deliveryBarangays, businessHours, facebook, instagram, website, estimatedDeliveryTime,
+        gcashNumber, gcashName, bankName, bankAccountNumber, bankAccountName,
       },
       { new: true }
     );

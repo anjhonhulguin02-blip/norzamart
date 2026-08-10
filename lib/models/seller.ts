@@ -20,6 +20,11 @@ const SellerSchema = new Schema(
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     deliveryBarangays: { type: [String], default: [] },
     estimatedDeliveryTime: { type: String, enum: ["", "Same-day", "1-2 days", "2-3 days", "3-5 days"], default: "" },
+    gcashNumber: { type: String },
+    gcashName: { type: String },
+    bankName: { type: String },
+    bankAccountNumber: { type: String },
+    bankAccountName: { type: String },
   },
   { timestamps: true }
 );

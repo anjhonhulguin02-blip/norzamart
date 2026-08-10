@@ -10,6 +10,7 @@ import Coupon from "@/lib/models/coupon";
 import User from "@/lib/models/user";
 import { createNotification } from "@/lib/createNotification";
 import { validateCoupon } from "@/lib/validateCoupon";
+import { invalidImageMessage } from "@/lib/validateImageUrl";
 
 export async function POST(req: Request) {
   try {
@@ -18,9 +19,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Please log in first." }, { status: 401 });
     }
 
-    const { paymentMethod, deliveryAddress, deliveryBarangay, couponCode, buyNow } = await req.json();
+    const { paymentMethod, deliveryAddress, deliveryBarangay, couponCode, buyNow, paymentReference, paymentProofImage } = await req.json();
     if (!deliveryAddress || !deliveryBarangay) {
       return NextResponse.json({ message: "Please provide your delivery address." }, { status: 400 });
+    }
+
+    if (paymentMethod && paymentMethod !== "cod") {
+      if (!paymentReference?.trim() || !paymentProofImage) {
+        return NextResponse.json({ message: "Please provide a payment reference number and proof of payment." }, { status: 400 });
+      }
+      const imageError = invalidImageMessage(paymentProofImage, "Payment proof");
+      if (imageError) {
+        return NextResponse.json({ message: imageError }, { status: 400 });
+      }
     }
 
     await connectToDatabase();
@@ -154,6 +165,8 @@ export async function POST(req: Request) {
           paymentMethod: paymentMethod || "cod",
           deliveryAddress,
           deliveryBarangay,
+          paymentReference: paymentMethod && paymentMethod !== "cod" ? paymentReference.trim() : undefined,
+          paymentProofImage: paymentMethod && paymentMethod !== "cod" ? paymentProofImage : undefined,
         });
 
         createdOrders.push(order._id.toString());

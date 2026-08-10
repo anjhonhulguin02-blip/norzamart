@@ -46,6 +46,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ message: "This order can no longer be updated." }, { status: 400 });
     }
 
+    if (status !== "cancelled" && order.paymentMethod !== "cod" && !order.paymentConfirmedAt) {
+      return NextResponse.json({ message: "Please confirm payment was received before updating this order." }, { status: 400 });
+    }
+
     if (status === "cancelled") {
       for (const item of order.items) {
         await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });

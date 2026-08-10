@@ -23,6 +23,9 @@ interface OrderDetail {
   cancelReason?: string;
   refundReason?: string;
   resolutionNote?: string;
+  paymentReference?: string;
+  paymentProofImage?: string;
+  paymentConfirmedAt?: string;
 }
 
 const PENDING_REQUEST_STATUSES = ["cancellation_requested", "refund_requested"];
@@ -67,6 +70,19 @@ export default function SellerOrderDetailPage() {
     setUpdating(false);
   };
 
+  const confirmPayment = async () => {
+    setUpdating(true);
+    setError('');
+    const res = await fetch(`/api/seller/orders/${id}/confirm-payment`, { method: 'PUT' });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.message || 'Something went wrong.');
+    } else {
+      fetchOrder();
+    }
+    setUpdating(false);
+  };
+
   const resolveRequest = async (action: 'approve' | 'reject', note?: string) => {
     setUpdating(true);
     setError('');
@@ -94,6 +110,7 @@ export default function SellerOrderDetailPage() {
   const isFinal = order.status === 'delivered' || order.status === 'cancelled';
   const isPendingRequest = PENDING_REQUEST_STATUSES.includes(order.status);
   const isRefundRequest = order.status === 'refund_requested';
+  const needsPaymentConfirmation = order.paymentMethod !== 'cod' && !order.paymentConfirmedAt && !isFinal && !isPendingRequest;
 
   return (
     <div>
@@ -187,7 +204,32 @@ export default function SellerOrderDetailPage() {
             </div>
           )}
 
-          {!isFinal && !isPendingRequest && (
+          {needsPaymentConfirmation && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+              <h2 className="font-display text-lg font-semibold text-amber-800 mb-2">
+                Confirm Payment Before Proceeding
+              </h2>
+              <p className="text-amber-700 text-xs font-body mb-3">
+                The buyer paid via {order.paymentMethod === 'gcash' ? 'GCash' : 'Bank Transfer'}. Check your account for this reference before accepting the order.
+              </p>
+              <div className="bg-white/70 rounded-xl p-4 mb-4">
+                <p className="text-xs text-ink/60">Reference Number</p>
+                <p className="text-sm font-bold text-ink font-mono">{order.paymentReference || '—'}</p>
+                {order.paymentProofImage && (
+                  <a href={order.paymentProofImage} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
+                    <img src={order.paymentProofImage} alt="Payment proof" className="w-24 h-24 rounded-lg object-cover border border-ink/10" />
+                  </a>
+                )}
+              </div>
+              {error && <p className="text-tomato text-xs font-semibold mb-3">{error}</p>}
+              <button onClick={confirmPayment} disabled={updating}
+                className="bg-basil hover:bg-basil-light disabled:opacity-50 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition-all">
+                {updating ? 'Confirming…' : 'Confirm Payment Received'}
+              </button>
+            </div>
+          )}
+
+          {!isFinal && !isPendingRequest && !needsPaymentConfirmation && (
             <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm">
               <h2 className="font-display text-lg font-semibold text-basil mb-3">Update Status</h2>
               {error && <p className="text-tomato text-xs font-semibold mb-3">{error}</p>}

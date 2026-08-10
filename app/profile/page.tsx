@@ -56,6 +56,7 @@ export default function ProfileSettingsPage() {
   const [sellerForm, setSellerForm] = useState({
     storeName: '', ownerName: '', contactNumber: '', email: '', address: '', barangay: '', storeDescription: '',
     businessHours: '', facebook: '', instagram: '', website: '', estimatedDeliveryTime: '',
+    gcashNumber: '', gcashName: '', bankName: '', bankAccountNumber: '', bankAccountName: '',
   });
   const [deliveryBarangays, setDeliveryBarangays] = useState<string[]>([]);
   const [sellerLogo, setSellerLogo] = useState<string | null>(null);
@@ -99,6 +100,8 @@ export default function ProfileSettingsPage() {
           email: s.email || '', address: s.address || '', barangay: s.barangay || '', storeDescription: s.storeDescription || '',
           businessHours: s.businessHours || '', facebook: s.facebook || '', instagram: s.instagram || '', website: s.website || '',
           estimatedDeliveryTime: s.estimatedDeliveryTime || '',
+          gcashNumber: s.gcashNumber || '', gcashName: s.gcashName || '', bankName: s.bankName || '',
+          bankAccountNumber: s.bankAccountNumber || '', bankAccountName: s.bankAccountName || '',
         });
         setSellerLogo(s.storeLogo || null);
         setSellerBanner(s.storeBanner || null);
@@ -674,6 +677,43 @@ export default function ProfileSettingsPage() {
                               );
                             })}
                           </div>
+                        </div>
+
+                        <div className="md:col-span-2 border-t border-ink/10 pt-5 mt-1">
+                          <h3 className="font-display text-sm font-semibold text-basil mb-1">💳 Payment Details</h3>
+                          <p className="text-ink/50 text-[11px] mb-3">
+                            Shown to buyers who pay via GCash or Bank Transfer, so they know where to send payment.
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-ink/70 mb-1">GCash Number</label>
+                          <input placeholder="09XX XXX XXXX" value={sellerForm.gcashNumber} onChange={(e) => setSellerForm({ ...sellerForm, gcashNumber: e.target.value })}
+                            className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-ink/70 mb-1">GCash Account Name</label>
+                          <input value={sellerForm.gcashName} onChange={(e) => setSellerForm({ ...sellerForm, gcashName: e.target.value })}
+                            className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-ink/70 mb-1">Bank Name</label>
+                          <input placeholder="e.g. BDO, BPI" value={sellerForm.bankName} onChange={(e) => setSellerForm({ ...sellerForm, bankName: e.target.value })}
+                            className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-ink/70 mb-1">Bank Account Number</label>
+                          <input value={sellerForm.bankAccountNumber} onChange={(e) => setSellerForm({ ...sellerForm, bankAccountNumber: e.target.value })}
+                            className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-ink/70 mb-1">Bank Account Name</label>
+                          <input value={sellerForm.bankAccountName} onChange={(e) => setSellerForm({ ...sellerForm, bankAccountName: e.target.value })}
+                            className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
                         </div>
 
                         <button type="submit" disabled={saving}

@@ -49,6 +49,9 @@ const OrderSchema = new Schema(
     cancelReason: { type: String },
     refundReason: { type: String },
     resolutionNote: { type: String },
+    paymentReference: { type: String },
+    paymentProofImage: { type: String },
+    paymentConfirmedAt: { type: Date },
   },
   { timestamps: true }
 );

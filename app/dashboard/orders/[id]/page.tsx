@@ -23,6 +23,9 @@ interface OrderDetail {
   cancelReason?: string;
   refundReason?: string;
   resolutionNote?: string;
+  paymentReference?: string;
+  paymentProofImage?: string;
+  paymentConfirmedAt?: string;
 }
 
 const CANCELLABLE_WITH_REASON = ["accepted", "preparing", "packed", "out_for_delivery"];
@@ -143,6 +146,14 @@ export default function BuyerOrderDetailPage() {
             <p className="text-sm text-ink/80">{order.deliveryAddress}</p>
             <p className="text-sm text-ink/50">{order.deliveryBarangay}</p>
             <p className="text-ink/50 text-xs mt-2">Payment: {order.paymentMethod === 'cod' ? 'Cash on Delivery' : order.paymentMethod === 'gcash' ? 'GCash' : 'Bank Transfer'}</p>
+            {order.paymentMethod !== 'cod' && order.paymentReference && (
+              <div className="mt-3 pt-3 border-t border-ink/10">
+                <p className="text-ink/50 text-xs">Reference: <span className="font-mono text-ink/70">{order.paymentReference}</span></p>
+                <p className={`text-xs font-semibold mt-1 ${order.paymentConfirmedAt ? 'text-basil' : 'text-amber-600'}`}>
+                  {order.paymentConfirmedAt ? '✔️ Payment confirmed by seller' : '⏳ Waiting for seller to confirm payment'}
+                </p>
+              </div>
+            )}
           </div>
 
           {order.status === 'pending' && (

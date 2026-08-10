@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import { fileToBase64, uploadIfNew } from '@/lib/uploadImage';
 
 interface SavedAddress {
   _id: string;
@@ -23,7 +24,15 @@ interface CartItem {
     price: number;
     unit: string;
     image?: string;
-    seller?: { storeName: string; estimatedDeliveryTime?: string };
+    seller?: {
+      storeName: string;
+      estimatedDeliveryTime?: string;
+      gcashNumber?: string;
+      gcashName?: string;
+      bankName?: string;
+      bankAccountNumber?: string;
+      bankAccountName?: string;
+    };
   };
 }
 
@@ -45,6 +54,8 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState('new');
   const [buyNow, setBuyNow] = useState<{ productId: string; quantity: number } | null>(null);
   const [buyNowRequested, setBuyNowRequested] = useState(false);
+  const [paymentReference, setPaymentReference] = useState('');
+  const [paymentProofImage, setPaymentProofImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/barangays').then((res) => res.json()).then((data) => setBarangays(data.barangays || []));
@@ -135,16 +146,21 @@ export default function CheckoutPage() {
   }, [items]);
 
   // Group items by seller for the summary
-  const groups = items.reduce((acc: Record<string, { sellerName: string; estimatedDeliveryTime?: string; items: CartItem[] }>, item) => {
+  const groups = items.reduce((acc: Record<string, { sellerName: string; estimatedDeliveryTime?: string; seller?: CartItem['product']['seller']; items: CartItem[] }>, item) => {
     const sellerId = item.product.seller ? (item.product.seller as any)._id || 'unknown' : 'unknown';
     if (!acc[sellerId]) acc[sellerId] = {
       sellerName: item.product.seller?.storeName || 'Store',
       estimatedDeliveryTime: item.product.seller?.estimatedDeliveryTime,
+      seller: item.product.seller,
       items: [],
     };
     acc[sellerId].items.push(item);
     return acc;
   }, {});
+
+  const hasAnySellerPaymentDetails = Object.values(groups).some(
+    (g) => g.seller?.gcashNumber || g.seller?.bankAccountNumber
+  );
 
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const sellerCount = Object.keys(groups).length;
@@ -158,13 +174,29 @@ export default function CheckoutPage() {
     setError('');
     setRequiresVerification(false);
     setResendMessage('');
+
+    if (form.paymentMethod !== 'cod' && (!paymentReference.trim() || !paymentProofImage)) {
+      setError('Please enter your payment reference number and upload a screenshot of your payment.');
+      return;
+    }
+
     setPlacing(true);
 
     try {
+      const uploadedProof = form.paymentMethod !== 'cod'
+        ? await uploadIfNew(paymentProofImage, 'payment-proof')
+        : undefined;
+
       const res = await fetch('/api/orders/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, couponCode: couponCode || undefined, buyNow: buyNow || undefined }),
+        body: JSON.stringify({
+          ...form,
+          couponCode: couponCode || undefined,
+          buyNow: buyNow || undefined,
+          paymentReference: form.paymentMethod !== 'cod' ? paymentReference.trim() : undefined,
+          paymentProofImage: uploadedProof,
+        }),
       });
       const data = await res.json();
 
@@ -289,6 +321,56 @@ export default function CheckoutPage() {
                   </label>
                 ))}
               </div>
+
+              {form.paymentMethod !== 'cod' && (
+                <div className="mt-4 pt-4 border-t border-ink/10 flex flex-col gap-4">
+                  {hasAnySellerPaymentDetails ? (
+                    <div className="flex flex-col gap-2">
+                      {Object.entries(groups).map(([sellerId, group]) => {
+                        const detail = form.paymentMethod === 'gcash'
+                          ? group.seller?.gcashNumber && `GCash: ${group.seller.gcashNumber} (${group.seller.gcashName || group.sellerName})`
+                          : group.seller?.bankAccountNumber && `${group.seller.bankName || 'Bank'}: ${group.seller.bankAccountNumber} (${group.seller.bankAccountName || group.sellerName})`;
+                        return (
+                          <div key={sellerId} className="bg-basil/5 border border-basil/20 rounded-xl px-4 py-2.5">
+                            <p className="text-xs font-bold text-ink">{group.sellerName}</p>
+                            <p className="text-ink/70 text-xs font-body mt-0.5">
+                              {detail || "This seller hasn't added their payment details yet — check with them via chat."}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-amber-700 text-xs font-semibold bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+                      The seller(s) in your basket haven't added payment details yet. Please confirm payment details with them via chat before sending money.
+                    </p>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-ink/70 mb-1">Payment Reference Number</label>
+                    <input required value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)}
+                      placeholder="e.g. GCash reference number"
+                      className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-ink/70 mb-1">Proof of Payment (screenshot)</label>
+                    {paymentProofImage ? (
+                      <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-ink/10">
+                        <img src={paymentProofImage} alt="Payment proof" className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => setPaymentProofImage(null)}
+                          className="absolute top-0 right-0 bg-tomato text-white w-5 h-5 text-xs flex items-center justify-center rounded-bl-md">
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <input type="file" accept="image/*" required
+                        onChange={async (e) => { const f = e.target.files?.[0]; if (f) setPaymentProofImage(await fileToBase64(f)); }}
+                        className="text-xs text-ink/70" />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-6 shadow-sm">
