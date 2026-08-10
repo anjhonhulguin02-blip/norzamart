@@ -15,6 +15,9 @@ const navItems = [
   { label: 'Coupons', href: '/dashboard/coupons', icon: '🎟️' },
 ];
 
+// Mobile menu shows Account Settings inline rather than as a visually separated item.
+export const buyerNavItems = [...navItems, { label: 'Account Settings', href: '/profile', icon: '⚙️' }];
+
 export default function BuyerSidebar() {
   const pathname = usePathname();
 

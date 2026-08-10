@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 
-const navItems = [
+export const sellerNavItems = [
   { label: 'Dashboard', href: '/seller/dashboard', icon: '📊' },
   { label: 'Products', href: '/seller/dashboard/products', icon: '📦' },
   { label: 'Orders', href: '/seller/dashboard/orders', icon: '🧾' },
@@ -26,7 +26,7 @@ export default function SellerSidebar() {
       </Link>
 
       <nav className="flex flex-col gap-1 flex-1">
-        {navItems.map((item) => {
+        {sellerNavItems.map((item) => {
           const active = pathname === item.href;
           return (
             <Link

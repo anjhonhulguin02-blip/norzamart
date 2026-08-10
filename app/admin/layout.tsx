@@ -1,7 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminSidebar, { adminNavItems } from "@/components/admin/AdminSidebar";
+import DashboardMobileTopbar from "@/components/DashboardMobileTopbar";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -11,7 +12,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="min-h-screen bg-cream-mist flex">
+    <div className="min-h-screen bg-cream-mist flex flex-col md:flex-row">
+      <DashboardMobileTopbar navItems={adminNavItems} brandSuffix="Admin" dark />
       <AdminSidebar />
       <div className="flex-1 p-6 md:p-10">{children}</div>
     </div>

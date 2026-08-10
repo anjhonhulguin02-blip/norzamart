@@ -1,7 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import BuyerSidebar from "@/components/buyer/BuyerSidebar";
+import BuyerSidebar, { buyerNavItems } from "@/components/buyer/BuyerSidebar";
+import DashboardMobileTopbar from "@/components/DashboardMobileTopbar";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 
 export default async function BuyerDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +13,8 @@ export default async function BuyerDashboardLayout({ children }: { children: Rea
   }
 
   return (
-    <div className="min-h-screen bg-cream-mist flex">
+    <div className="min-h-screen bg-cream-mist flex flex-col md:flex-row">
+      <DashboardMobileTopbar navItems={buyerNavItems} />
       <BuyerSidebar />
       <div className="flex-1 p-6 md:p-10">
         <AnnouncementBanner className="mb-5" />

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 
-const navItems = [
+export const adminNavItems = [
   { label: 'Dashboard', href: '/admin', icon: '📊' },
   { label: 'Users', href: '/admin/users', icon: '👥' },
   { label: 'Sellers', href: '/admin/sellers', icon: '🏬' },
@@ -30,7 +30,7 @@ export default function AdminSidebar() {
       </Link>
 
       <nav className="flex flex-col gap-1 flex-1">
-        {navItems.map((item) => {
+        {adminNavItems.map((item) => {
           const active = pathname === item.href;
           return (
             <Link
