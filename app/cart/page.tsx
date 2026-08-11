@@ -206,7 +206,7 @@ export default function CartPage() {
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                       placeholder="Promo code"
-                      className="flex-1 bg-white border border-ink/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-basil/40"
+                      className="flex-1 min-w-0 bg-white border border-ink/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-basil/40"
                     />
                     <button
                       onClick={() => applyCoupon(couponInput)}

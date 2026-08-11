@@ -252,7 +252,7 @@ export default function ChatThreadPage() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Type a message…"
-              className="flex-1 bg-white border border-ink/10 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40"
+              className="flex-1 min-w-0 bg-white border border-ink/10 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40"
             />
             <button
               type="submit"
