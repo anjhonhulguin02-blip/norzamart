@@ -112,6 +112,7 @@ export default async function Home({
     .map((p: any) => ({
       id: p._id.toString(), name: p.name, price: p.price, originalPrice: p.originalPrice,
       image: p.image, unit: p.unit || 'piece', stock: p.stock, soldCount: p.soldCount || 0,
+      promotionEndsAt: p.promotionEndsAt ? p.promotionEndsAt.toISOString() : undefined,
     }));
 
   // Fresh Today — products created within the last 24 hours

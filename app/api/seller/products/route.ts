@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       name, description, category, price, originalPrice, unit, image, images, stock, tag,
-      weight, origin, freshUntil, availableBarangays, deliveryFee,
+      weight, origin, freshUntil, availableBarangays, deliveryFee, promotionEndsAt,
     } = body;
 
     if (!name || !category || price === undefined || stock === undefined) {
@@ -44,6 +44,7 @@ export async function POST(req: Request) {
       seller: seller._id,
       name, description, category, price, originalPrice, unit, image, images, stock, tag,
       weight, origin, freshUntil: freshUntil || undefined, availableBarangays, deliveryFee,
+      promotionEndsAt: promotionEndsAt || undefined,
     });
 
     return NextResponse.json({ message: "Product created!", product }, { status: 201 });

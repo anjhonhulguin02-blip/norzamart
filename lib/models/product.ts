@@ -22,6 +22,7 @@ const ProductSchema = new Schema(
     availableBarangays: { type: [String], default: [] },
     deliveryFee: { type: Number },
     soldCount: { type: Number, default: 0 },
+    promotionEndsAt: { type: Date },
   },
   { timestamps: true }
 );

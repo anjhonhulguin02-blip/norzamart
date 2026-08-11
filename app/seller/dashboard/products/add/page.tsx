@@ -21,6 +21,7 @@ export default function AddProductPage() {
   const [form, setForm] = useState({
     name: '', description: '', category: '', price: '', originalPrice: '',
     stock: '', tag: '', unit: 'piece', weight: '', origin: '', freshUntil: '', deliveryFee: '',
+    promotionEndsAt: '',
   });
   const [image, setImage] = useState<string | null>(null);
   const [gallery, setGallery] = useState<string[]>([]);
@@ -171,6 +172,7 @@ export default function AddProductPage() {
             <label className="block text-xs font-bold text-ink/70 mb-1">Tag (optional)</label>
             <input placeholder="e.g. New, Sale, Best Seller" value={form.tag} onChange={(e) => update('tag', e.target.value)}
               className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+            <p className="text-ink/40 text-[10px] mt-1">A short promo badge only — packaging/quantity is already shown from "Sold By" and "Weight" below, so repeating it here (e.g. "Per 500g") can contradict the price shown per unit.</p>
           </div>
 
           <div>
@@ -183,6 +185,13 @@ export default function AddProductPage() {
             <label className="block text-xs font-bold text-ink/70 mb-1">Original Price (optional)</label>
             <input type="number" min="0" step="0.01" value={form.originalPrice} onChange={(e) => update('originalPrice', e.target.value)}
               className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-ink/70 mb-1">Sale Ends On (optional)</label>
+            <input type="datetime-local" value={form.promotionEndsAt} onChange={(e) => update('promotionEndsAt', e.target.value)}
+              className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
+            <p className="text-ink/40 text-[10px] mt-1">Only shows a "Today's Deals" countdown while a discount is active and this is in the future.</p>
           </div>
 
           <div>

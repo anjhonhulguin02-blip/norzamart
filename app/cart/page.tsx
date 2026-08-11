@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
+import { formatPeso, formatUnitSuffix, formatLineTotal } from '@/lib/formatProduct';
 
 interface CartItem {
   _id: string;
@@ -152,7 +153,7 @@ export default function CartPage() {
                       </Link>
                       <p className="text-ink/50 text-xs font-body mt-0.5">{item.product.seller?.storeName}</p>
                       <p className="font-mono text-sm font-bold text-ink mt-1">
-                        ₱{item.product.price} <span className="text-ink/40 text-xs font-body">/{item.product.unit}</span>
+                        {formatPeso(item.product.price)} <span className="text-ink/40 text-xs font-body">{formatUnitSuffix(item.product.unit)}</span>
                       </p>
 
                       <div className="flex items-center gap-3 mt-2">
@@ -182,7 +183,7 @@ export default function CartPage() {
                     </div>
 
                     <div className="font-mono font-bold text-ink text-sm">
-                      ₱{(item.product.price * item.quantity).toFixed(2)}
+                      {formatLineTotal(item.product.price, item.quantity)}
                     </div>
                   </motion.div>
                 ))}
@@ -222,21 +223,21 @@ export default function CartPage() {
 
               <div className="flex justify-between text-sm text-ink/70 font-body mb-2">
                 <span>Subtotal</span>
-                <span className="font-mono">₱{total.toFixed(2)}</span>
+                <span className="font-mono">{formatPeso(total)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm text-basil font-body mb-2">
                   <span>Discount</span>
-                  <span className="font-mono">−₱{discount.toFixed(2)}</span>
+                  <span className="font-mono">−{formatPeso(discount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm text-ink/70 font-body mb-4">
                 <span>Delivery</span>
-                <span className="font-mono">{deliveryFee === 0 ? 'Free' : `₱${deliveryFee.toFixed(2)}`}</span>
+                <span className="font-mono">{deliveryFee === 0 ? 'Free' : formatPeso(deliveryFee)}</span>
               </div>
               <div className="border-t border-ink/10 pt-4 flex justify-between font-bold text-ink mb-5">
                 <span>Total</span>
-                <span className="font-mono">₱{grandTotal.toFixed(2)}</span>
+                <span className="font-mono">{formatPeso(grandTotal)}</span>
               </div>
               <Link href="/checkout" className="w-full block text-center bg-basil hover:bg-basil-light text-white font-bold py-3 rounded-xl shadow-md shadow-basil/20 text-sm transition-all">
                 Proceed to Checkout →

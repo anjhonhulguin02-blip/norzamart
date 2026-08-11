@@ -13,17 +13,28 @@ interface Deal {
   unit: string;
   stock: number;
   soldCount?: number;
+  promotionEndsAt?: string;
 }
 
-function useCountdownToMidnight() {
-  const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0 });
+/** Counts down to `targetDate`, or returns null once it's null/passed — the
+ * caller uses that to hide the countdown badge entirely rather than showing
+ * a timer disconnected from any real promotion.
+ */
+function useCountdown(targetDate: Date | null) {
+  const [timeLeft, setTimeLeft] = useState<{ h: number; m: number; s: number } | null>(null);
+  const targetMs = targetDate?.getTime();
 
   useEffect(() => {
+    if (!targetMs) {
+      setTimeLeft(null);
+      return;
+    }
     const tick = () => {
-      const now = new Date();
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0);
-      const diff = midnight.getTime() - now.getTime();
+      const diff = targetMs - Date.now();
+      if (diff <= 0) {
+        setTimeLeft(null);
+        return;
+      }
       setTimeLeft({
         h: Math.floor(diff / 3600000),
         m: Math.floor((diff % 3600000) / 60000),
@@ -33,13 +44,22 @@ function useCountdownToMidnight() {
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [targetMs]);
 
   return timeLeft;
 }
 
 export default function TodaysDeals({ deals }: { deals: Deal[] }) {
-  const { h, m, s } = useCountdownToMidnight();
+  // Count down to the soonest real, future promotionEndsAt among today's
+  // deals — never a generic reset timer unrelated to an actual promotion.
+  const futureEndDates = deals
+    .map((d) => (d.promotionEndsAt ? new Date(d.promotionEndsAt) : null))
+    .filter((d): d is Date => !!d && d.getTime() > Date.now());
+  const nextEnd = futureEndDates.length > 0
+    ? new Date(Math.min(...futureEndDates.map((d) => d.getTime())))
+    : null;
+
+  const timeLeft = useCountdown(nextEnd);
 
   if (deals.length === 0) return null;
 
@@ -51,9 +71,11 @@ export default function TodaysDeals({ deals }: { deals: Deal[] }) {
         <h2 className="text-xl font-black text-gray-900 tracking-tight drop-shadow-sm flex items-center gap-2">
           🔥 Today's Deals
         </h2>
-        <div className="flex items-center gap-1.5 bg-tomato text-white text-xs font-bold px-3 py-1.5 rounded-full">
-          Ends in <span className="font-mono">{pad(h)}:{pad(m)}:{pad(s)}</span>
-        </div>
+        {timeLeft && (
+          <div className="flex items-center gap-1.5 bg-tomato text-white text-xs font-bold px-3 py-1.5 rounded-full">
+            Ends in <span className="font-mono">{pad(timeLeft.h)}:{pad(timeLeft.m)}:{pad(timeLeft.s)}</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">

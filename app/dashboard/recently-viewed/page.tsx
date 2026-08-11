@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
 
 interface RVProduct {
   _id: string;
@@ -68,7 +69,7 @@ export default function RecentlyViewedPage() {
                 )}
               </div>
               <h3 className="font-body font-bold text-sm text-ink line-clamp-1">{p.name}</h3>
-              <p className="font-mono text-sm font-bold text-ink mt-1">₱{p.price} <span className="text-ink/40 text-xs">/{p.unit}</span></p>
+              <p className="font-mono text-sm font-bold text-ink mt-1">{formatPeso(p.price)} <span className="text-ink/40 text-xs">{formatUnitSuffix(p.unit)}</span></p>
             </Link>
           ))}
         </div>

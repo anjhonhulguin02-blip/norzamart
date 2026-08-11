@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import OrderStatusBadge from '@/components/OrderStatusBadge';
 import OrderTimeline from '@/components/OrderTimeline';
+import { formatOrderLineQuantity, formatLineTotal, formatPeso } from '@/lib/formatProduct';
 
 const FLOW = ["pending", "accepted", "preparing", "packed", "out_for_delivery", "delivered"];
 
@@ -138,17 +139,17 @@ export default function SellerOrderDetailPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-ink">{item.name}</p>
-                    <p className="text-ink/50 text-xs">₱{item.price} × {item.quantity} {item.unit}</p>
+                    <p className="text-ink/50 text-xs">{formatOrderLineQuantity(item.price, item.quantity, item.unit)}</p>
                   </div>
-                  <p className="font-mono text-sm font-bold text-ink">₱{(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="font-mono text-sm font-bold text-ink">{formatLineTotal(item.price, item.quantity)}</p>
                 </div>
               ))}
             </div>
 
             <div className="border-t border-ink/10 mt-3 pt-3 flex flex-col gap-1 text-sm">
-              <div className="flex justify-between text-ink/70"><span>Subtotal</span><span className="font-mono">₱{order.subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between text-ink/70"><span>Delivery</span><span className="font-mono">₱{order.deliveryFee.toFixed(2)}</span></div>
-              <div className="flex justify-between font-bold text-ink"><span>Total</span><span className="font-mono">₱{order.total.toFixed(2)}</span></div>
+              <div className="flex justify-between text-ink/70"><span>Subtotal</span><span className="font-mono">{formatPeso(order.subtotal)}</span></div>
+              <div className="flex justify-between text-ink/70"><span>Delivery</span><span className="font-mono">{formatPeso(order.deliveryFee)}</span></div>
+              <div className="flex justify-between font-bold text-ink"><span>Total</span><span className="font-mono">{formatPeso(order.total)}</span></div>
             </div>
           </div>
 

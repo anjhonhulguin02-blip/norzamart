@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Modal from "@/components/ui/Modal";
+import { formatPeso } from "@/lib/formatProduct";
 
 interface Product {
   _id: string;
@@ -118,9 +119,9 @@ export default function ProductsListPage() {
               </div>
 
               <div className="text-right">
-                <p className="text-sm font-mono font-bold text-basil">₱{p.price.toFixed(2)}</p>
+                <p className="text-sm font-mono font-bold text-basil">{formatPeso(p.price)}</p>
                 {p.originalPrice && (
-                  <p className="text-[10px] text-ink/30 line-through">₱{p.originalPrice.toFixed(2)}</p>
+                  <p className="text-[10px] text-ink/30 line-through">{formatPeso(p.originalPrice)}</p>
                 )}
               </div>
 

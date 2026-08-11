@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { fileToBase64, uploadIfNew } from '@/lib/uploadImage';
+import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
 
 interface Review {
   _id: string;
@@ -323,11 +324,11 @@ export default function ProductDetailClient({
           </div>
 
           <div className="flex items-baseline gap-3 mt-4">
-            <span className="font-mono text-3xl font-bold text-ink">₱{price}</span>
+            <span className="font-mono text-3xl font-bold text-ink">{formatPeso(price)}</span>
             {originalPrice && (
-              <span className="font-mono text-base text-ink/40 line-through">₱{originalPrice}</span>
+              <span className="font-mono text-base text-ink/40 line-through">{formatPeso(originalPrice)}</span>
             )}
-            <span className="text-ink/40 text-sm">/{unit}</span>
+            <span className="text-ink/40 text-sm">{formatUnitSuffix(unit)}</span>
           </div>
 
           <div className="flex items-center gap-3 mt-2">

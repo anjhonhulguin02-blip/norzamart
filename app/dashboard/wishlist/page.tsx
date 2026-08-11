@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
 
 interface WishlistItem {
   _id: string;
@@ -90,7 +91,7 @@ export default function WishlistPage() {
                   <h3 className="font-body font-bold text-sm text-ink line-clamp-1">{item.product.name}</h3>
                   <p className="text-ink/50 text-xs font-body mt-0.5">{item.product.seller?.storeName}</p>
                   <p className="font-mono text-sm font-bold text-ink mt-1">
-                    ₱{item.product.price} <span className="text-ink/40 text-xs">/{item.product.unit}</span>
+                    {formatPeso(item.product.price)} <span className="text-ink/40 text-xs">{formatUnitSuffix(item.product.unit)}</span>
                   </p>
                 </Link>
                 <div className="flex gap-2 mt-3">

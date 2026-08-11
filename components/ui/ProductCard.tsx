@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToast } from './Toast';
+import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
 
 // Some callers pass a real photo (Cloudinary URL or legacy base64 data URI); others pass a bare
 // emoji string as a "no photo" placeholder. Only the former should ever be rendered as an <img>.
@@ -102,7 +103,7 @@ export default function ProductCard({
           )}
         </div>
         <h4 className="text-xs font-bold text-ink line-clamp-2">{p.name}</h4>
-        <p className="font-mono text-xs font-bold text-ink mt-1">₱{p.price} <span className="text-ink/40 font-normal">/{p.unit || 'piece'}</span></p>
+        <p className="font-mono text-xs font-bold text-ink mt-1">{formatPeso(p.price)} <span className="text-ink/40 font-normal">{formatUnitSuffix(p.unit)}</span></p>
       </Link>
     );
   }
@@ -157,9 +158,9 @@ export default function ProductCard({
         )}
 
         <div className="flex items-baseline gap-2 mt-2">
-          <span className="text-base font-black text-gray-900">₱{p.price}</span>
-          {p.originalPrice && <span className="text-xs text-gray-500 font-medium line-through">₱{p.originalPrice}</span>}
-          <span className="text-[10px] text-gray-500">/{p.unit || 'piece'}</span>
+          <span className="text-base font-black text-gray-900">{formatPeso(p.price)}</span>
+          {p.originalPrice && <span className="text-xs text-gray-500 font-medium line-through">{formatPeso(p.originalPrice)}</span>}
+          <span className="text-[10px] text-gray-500">{formatUnitSuffix(p.unit)}</span>
         </div>
 
         {p.stock !== undefined && (

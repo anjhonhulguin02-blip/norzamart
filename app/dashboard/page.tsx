@@ -8,6 +8,7 @@ import Notification from "@/lib/models/notification";
 import Address from "@/lib/models/address";
 import Coupon from "@/lib/models/coupon";
 import Link from "next/link";
+import { formatPeso, formatUnitSuffix } from "@/lib/formatProduct";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
 import RecentlyViewedPreview from "@/components/buyer/RecentlyViewedPreview";
 
@@ -162,7 +163,7 @@ export default async function BuyerDashboardPage() {
                   )}
                 </div>
                 <p className="font-body font-bold text-xs text-ink line-clamp-1">{w.product?.name}</p>
-                <p className="font-mono text-xs font-bold text-ink mt-0.5">₱{w.product?.price} <span className="text-ink/40">/{w.product?.unit}</span></p>
+                <p className="font-mono text-xs font-bold text-ink mt-0.5">{formatPeso(w.product?.price || 0)} <span className="text-ink/40">{formatUnitSuffix(w.product?.unit)}</span></p>
               </Link>
             ))}
           </div>

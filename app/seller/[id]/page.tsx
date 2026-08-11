@@ -8,6 +8,7 @@ import FollowButton from '@/components/FollowButton';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -97,7 +98,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         )}
       </div>
       <h3 className="font-body font-bold text-sm text-ink line-clamp-1">{p.name}</h3>
-      <p className="font-mono text-sm font-bold text-ink mt-1">₱{p.price} <span className="text-ink/40 text-xs">/{p.unit || 'piece'}</span></p>
+      <p className="font-mono text-sm font-bold text-ink mt-1">{formatPeso(p.price)} <span className="text-ink/40 text-xs">{formatUnitSuffix(p.unit)}</span></p>
     </Link>
   );
 

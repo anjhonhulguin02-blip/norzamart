@@ -32,7 +32,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json();
     const {
       name, description, category, price, originalPrice, unit, image, images, stock, tag, status,
-      weight, origin, freshUntil, availableBarangays, deliveryFee,
+      weight, origin, freshUntil, availableBarangays, deliveryFee, promotionEndsAt,
     } = body;
 
     const imageError = invalidImageMessage(image, "Product image") || invalidImageArrayMessage(images, "Product images");
@@ -46,6 +46,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       {
         name, description, category, price, originalPrice, unit, image, images, stock, tag, status,
         weight, origin, freshUntil: freshUntil || undefined, availableBarangays, deliveryFee,
+        promotionEndsAt: promotionEndsAt || undefined,
       },
       { new: true }
     );

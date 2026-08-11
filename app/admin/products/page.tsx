@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { formatPeso } from '@/lib/formatProduct';
 
 interface Product {
   _id: string;
@@ -116,7 +117,7 @@ export default function AdminProductsPage() {
             <div key={p._id} className={`flex items-center justify-between flex-wrap gap-3 p-4 ${i !== filtered.length - 1 ? 'border-b border-ink/5' : ''}`}>
               <div>
                 <p className="text-sm font-bold text-ink">{p.name}</p>
-                <p className="text-ink/50 text-xs">{p.seller?.storeName} • {p.category} • ₱{p.price}</p>
+                <p className="text-ink/50 text-xs">{p.seller?.storeName} • {p.category} • {formatPeso(p.price)}</p>
                 {p.approvalStatus === 'rejected' && p.rejectionReason && (
                   <p className="text-tomato text-xs mt-1">Reason: {p.rejectionReason}</p>
                 )}

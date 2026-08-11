@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { fileToBase64, uploadIfNew } from '@/lib/uploadImage';
+import { formatPeso, formatLineTotal } from '@/lib/formatProduct';
 
 interface SavedAddress {
   _id: string;
@@ -390,8 +391,10 @@ export default function CheckoutPage() {
                           <img src={item.product.image} alt={item.product.name} className="max-w-full max-h-full object-contain" />
                         ) : <span className="text-lg">🛒</span>}
                       </div>
-                      <p className="flex-1 text-xs font-semibold text-ink truncate">{item.product.name} × {item.quantity}</p>
-                      <p className="font-mono text-xs font-bold text-ink">₱{(item.product.price * item.quantity).toFixed(2)}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-ink truncate">{item.product.name} × {item.quantity} {item.product.unit || 'piece'}</p>
+                      </div>
+                      <p className="font-mono text-xs font-bold text-ink">{formatLineTotal(item.product.price, item.quantity)}</p>
                     </div>
                   ))}
                 </div>
@@ -403,21 +406,21 @@ export default function CheckoutPage() {
             <h2 className="font-display text-lg font-semibold text-basil mb-4">Order Summary</h2>
             <div className="flex justify-between text-sm text-ink/70 font-body mb-2">
               <span>Subtotal</span>
-              <span className="font-mono">₱{subtotal.toFixed(2)}</span>
+              <span className="font-mono">{formatPeso(subtotal)}</span>
             </div>
             {couponCode && discount > 0 && (
               <div className="flex justify-between text-sm text-basil font-body mb-2">
                 <span>🎟️ {couponCode}</span>
-                <span className="font-mono">−₱{discount.toFixed(2)}</span>
+                <span className="font-mono">−{formatPeso(discount)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm text-ink/70 font-body mb-4">
               <span>Delivery ({sellerCount} store{sellerCount > 1 ? 's' : ''})</span>
-              <span className="font-mono">₱{estimatedDeliveryFee.toFixed(2)}</span>
+              <span className="font-mono">{formatPeso(estimatedDeliveryFee)}</span>
             </div>
             <div className="border-t border-ink/10 pt-4 flex justify-between font-bold text-ink mb-5">
               <span>Total</span>
-              <span className="font-mono">₱{Math.max(subtotal + estimatedDeliveryFee - discount, 0).toFixed(2)}</span>
+              <span className="font-mono">{formatPeso(Math.max(subtotal + estimatedDeliveryFee - discount, 0))}</span>
             </div>
 
             {error && (
