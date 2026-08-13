@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import ProductGrid from '@/components/ProductGrid';
@@ -23,14 +24,25 @@ function SearchContent() {
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
     barangay: searchParams.get('barangay') || '',
-    minPrice: '',
-    maxPrice: '',
-    minRating: '',
-    sort: 'newest',
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+    minRating: searchParams.get('minRating') || '',
+    sort: searchParams.get('sort') || 'newest',
   });
 
-  const fetchResults = async () => {
+  const fetchResults = async (params: URLSearchParams, cancelledRef: { current: boolean }) => {
     setLoading(true);
+    const res = await fetch(`/api/products/filter?${params.toString()}`);
+    const data = await res.json();
+    if (cancelledRef.current) return;
+    setProducts(data.products || []);
+    setLoading(false);
+  };
+
+  // Rebuilds the URL's query string from the current filters on every change,
+  // so the address bar always reflects what's on screen (shareable, survives
+  // refresh/back-button) — previously only q/category/barangay were synced.
+  useEffect(() => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (filters.category) params.set('category', filters.category);
@@ -39,14 +51,14 @@ function SearchContent() {
     if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
     if (filters.minRating) params.set('minRating', filters.minRating);
     params.set('sort', filters.sort);
+    router.replace(`/search?${params.toString()}`, { scroll: false });
 
-    const res = await fetch(`/api/products/filter?${params.toString()}`);
-    const data = await res.json();
-    setProducts(data.products || []);
-    setLoading(false);
-  };
+    const cancelledRef = { current: false };
+    fetchResults(params, cancelledRef);
 
-  useEffect(() => { fetchResults(); }, [q, filters]);
+    return () => { cancelledRef.current = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, filters]);
 
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
@@ -55,7 +67,9 @@ function SearchContent() {
         <h1 className="font-display text-2xl font-semibold text-basil mb-1">
           {q ? `Results for "${q}"` : 'All Products'}
         </h1>
-        <p className="text-ink/50 text-sm font-body mb-6">{products.length} product{products.length !== 1 ? 's' : ''} found</p>
+        <p className="text-ink/50 text-sm font-body mb-6">
+          {loading ? ' ' : `${products.length} product${products.length !== 1 ? 's' : ''} found`}
+        </p>
 
         <div className="flex flex-wrap gap-3 mb-6">
           <select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}
@@ -110,6 +124,29 @@ function SearchContent() {
 
         {loading ? (
           <p className="text-ink/50 text-sm font-body">Searching…</p>
+        ) : products.length === 0 ? (
+          <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-3xl p-12 text-center shadow-lg">
+            <span className="text-4xl mb-3 block">🔍</span>
+            <h2 className="font-display text-xl font-semibold text-basil mb-1">
+              {q ? `No products match "${q}"` : 'No products found'}
+            </h2>
+            <p className="text-ink/50 text-sm font-body mb-5">
+              Try a different search term or adjust your filters.
+            </p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              {(filters.category || filters.barangay || filters.minPrice || filters.maxPrice || filters.minRating) && (
+                <button
+                  onClick={() => setFilters({ category: '', barangay: '', minPrice: '', maxPrice: '', minRating: '', sort: 'newest' })}
+                  className="bg-white border border-basil/30 text-basil hover:bg-basil/5 font-bold text-sm px-5 py-2.5 rounded-xl transition-all"
+                >
+                  Clear Filters
+                </button>
+              )}
+              <Link href="/" className="inline-block bg-basil hover:bg-basil-light text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-all">
+                Browse All Products
+              </Link>
+            </div>
+          </div>
         ) : (
           <ProductGrid categories={[]} products={products} />
         )}
