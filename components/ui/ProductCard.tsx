@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useToast } from './Toast';
+import { useAuthPrompt } from '../AuthPromptProvider';
 import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
 
 // Some callers pass a real photo (Cloudinary URL or legacy base64 data URI); others pass a bare
@@ -49,26 +50,32 @@ export default function ProductCard({
   onToggleWishlist,
 }: ProductCardProps) {
   const { data: session } = useSession();
-  const router = useRouter();
   const { showToast } = useToast();
+  const { requireAuth } = useAuthPrompt();
   const [adding, setAdding] = useState(false);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
   const productId = String(p.id);
+
+  const doToggleWishlist = () => {
+    setWishlistBusy(true);
+    try {
+      onToggleWishlist?.(productId);
+    } finally {
+      setWishlistBusy(false);
+    }
+  };
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!session) {
-      router.push('/');
+      requireAuth(doToggleWishlist, 'Sign in to save items to your wishlist.');
       return;
     }
-    onToggleWishlist?.(productId);
+    doToggleWishlist();
   };
 
-  const handleAddToBasket = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!session) {
-      router.push('/');
-      return;
-    }
+  const doAddToBasket = async () => {
     setAdding(true);
     try {
       const res = await fetch('/api/cart', {
@@ -89,14 +96,26 @@ export default function ProductCard({
     setAdding(false);
   };
 
+  const handleAddToBasket = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!session) {
+      requireAuth(doAddToBasket, `Sign in to add "${p.name}" to your basket.`);
+      return;
+    }
+    doAddToBasket();
+  };
+
   if (compact) {
     return (
       <Link
         href={`/product/${p.id}`}
         className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all"
       >
-        <div className="w-full h-24 bg-white rounded-xl flex items-center justify-center overflow-hidden mb-2">
-          {isImageUrl(p.image) ? (
+        <div className="relative w-full h-24 bg-white rounded-xl flex items-center justify-center overflow-hidden mb-2">
+          {p.image?.startsWith('http') ? (
+            <Image src={p.image} alt={p.name} fill sizes="140px" className="object-contain" />
+          ) : isImageUrl(p.image) ? (
             <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
           ) : (
             <span className="text-3xl">{p.image || '🛒'}</span>
@@ -109,10 +128,14 @@ export default function ProductCard({
   }
 
   return (
-    <Link
-      href={`/product/${p.id}`}
-      className="bg-white/40 backdrop-blur-lg border border-white/60 rounded-2xl p-4 flex flex-col justify-between relative shadow-xl hover:shadow-2xl hover:bg-white/50 transition-all group"
-    >
+    <div className="bg-white/40 backdrop-blur-lg border border-white/60 rounded-2xl p-4 flex flex-col justify-between relative shadow-xl hover:shadow-2xl hover:bg-white/50 transition-all group">
+      {/* Covers the whole card so the card is clickable everywhere without nesting
+          the wishlist/add-to-basket buttons inside an <a> (invalid HTML that makes
+          screen readers skip or mishandle them). z-0 + position:absolute puts it
+          above the static image/text content but below the z-10 buttons below,
+          so those stay independently clickable via normal CSS stacking. */}
+      <Link href={`/product/${p.id}`} aria-label={p.name} className="absolute inset-0 z-0 rounded-2xl" />
+
       {badge && (
         <span className={`absolute top-3 left-3 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-md shadow-sm z-10 ${
           badgeColor === 'basil' ? 'bg-basil/90' : 'bg-tomato/90'
@@ -124,8 +147,10 @@ export default function ProductCard({
       {showWishlist && (
         <button
           onClick={handleWishlist}
-          aria-label="Wishlist"
-          className={`absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all ${
+          disabled={wishlistBusy}
+          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          aria-pressed={isWishlisted}
+          className={`absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all disabled:opacity-50 ${
             isWishlisted ? 'bg-tomato text-white' : 'bg-white/80 hover:bg-white text-tomato'
           }`}
         >
@@ -133,8 +158,10 @@ export default function ProductCard({
         </button>
       )}
 
-      <div className="w-full h-32 sm:h-40 bg-white/50 shadow-inner rounded-xl flex items-center justify-center text-4xl mb-3 overflow-hidden group-hover:scale-105 transition-transform duration-300">
-        {isImageUrl(p.image) ? (
+      <div className="relative w-full h-32 sm:h-40 bg-white/50 shadow-inner rounded-xl flex items-center justify-center text-4xl mb-3 overflow-hidden group-hover:scale-105 transition-transform duration-300">
+        {p.image?.startsWith('http') ? (
+          <Image src={p.image} alt={p.name} fill sizes="(max-width: 640px) 45vw, 220px" className="object-contain" />
+        ) : isImageUrl(p.image) ? (
           <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
         ) : (
           p.image || '🛒'
@@ -184,11 +211,11 @@ export default function ProductCard({
         <button
           onClick={handleAddToBasket}
           disabled={adding}
-          className="w-full mt-4 bg-emerald-700/90 hover:bg-emerald-800 disabled:opacity-60 backdrop-blur-sm text-white text-xs font-bold py-2.5 rounded-xl border border-emerald-500/50 shadow-md transition-all"
+          className="relative z-10 w-full mt-4 bg-emerald-700/90 hover:bg-emerald-800 disabled:opacity-60 backdrop-blur-sm text-white text-xs font-bold py-2.5 rounded-xl border border-emerald-500/50 shadow-md transition-all"
         >
           {adding ? 'Adding…' : '+ Add to Basket'}
         </button>
       )}
-    </Link>
+    </div>
   );
 }

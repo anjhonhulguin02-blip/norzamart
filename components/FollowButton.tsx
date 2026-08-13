@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useAuthPrompt } from './AuthPromptProvider';
+import { useToast } from './ui/Toast';
 
 interface Props {
   sellerId: string;
@@ -14,7 +15,8 @@ interface Props {
 
 export default function FollowButton({ sellerId, initialFollowerCount, size = 'md', showCount = true, onToggle }: Props) {
   const { data: session } = useSession();
-  const router = useRouter();
+  const { requireAuth } = useAuthPrompt();
+  const { showToast } = useToast();
   const [following, setFollowing] = useState(false);
   const [count, setCount] = useState(initialFollowerCount);
   const [loading, setLoading] = useState(false);
@@ -27,13 +29,7 @@ export default function FollowButton({ sellerId, initialFollowerCount, size = 'm
       .catch(() => {});
   }, [session, sellerId]);
 
-  const toggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!session) {
-      router.push('/');
-      return;
-    }
+  const doToggle = async () => {
     setLoading(true);
     const prevFollowing = following;
     setFollowing(!prevFollowing);
@@ -52,12 +48,24 @@ export default function FollowButton({ sellerId, initialFollowerCount, size = 'm
       } else {
         setFollowing(prevFollowing);
         setCount((c) => c + (prevFollowing ? 1 : -1));
+        showToast(data.message || 'Could not update follow status.', 'error');
       }
     } catch {
       setFollowing(prevFollowing);
       setCount((c) => c + (prevFollowing ? 1 : -1));
+      showToast('Unable to connect to the server.', 'error');
     }
     setLoading(false);
+  };
+
+  const toggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!session) {
+      requireAuth(doToggle, 'Sign in to follow this store.');
+      return;
+    }
+    doToggle();
   };
 
   if (size === 'sm') {
@@ -65,11 +73,12 @@ export default function FollowButton({ sellerId, initialFollowerCount, size = 'm
       <button
         onClick={toggle}
         disabled={loading}
+        aria-pressed={following}
         className={`text-[11px] font-bold px-3 py-1.5 rounded-full transition-all disabled:opacity-60 ${
           following ? 'bg-basil text-white' : 'bg-basil/10 text-basil hover:bg-basil/20'
         }`}
       >
-        {following ? '✔ Following' : '+ Follow'}
+        {loading ? '…' : following ? '✔ Following' : '+ Follow'}
         {showCount && <span className="opacity-70"> · {count}</span>}
       </button>
     );
@@ -80,11 +89,12 @@ export default function FollowButton({ sellerId, initialFollowerCount, size = 'm
       <button
         onClick={toggle}
         disabled={loading}
+        aria-pressed={following}
         className={`text-sm font-bold px-5 py-2.5 rounded-xl transition-all disabled:opacity-60 ${
           following ? 'bg-basil text-white shadow-md shadow-basil/20' : 'bg-basil/10 text-basil hover:bg-basil/20'
         }`}
       >
-        {following ? '✔ Following' : '+ Follow Store'}
+        {loading ? 'Updating…' : following ? '✔ Following' : '+ Follow Store'}
       </button>
       {showCount && (
         <span className="text-ink/50 text-xs font-body">{count} follower{count === 1 ? '' : 's'}</span>

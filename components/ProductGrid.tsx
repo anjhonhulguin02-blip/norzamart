@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import ProductCard from './ui/ProductCard';
+import { useToast } from './ui/Toast';
 
 export interface Category {
   id: string | number;
@@ -34,6 +35,7 @@ interface ProductGridProps {
 
 export default function ProductGrid({ categories, products, activeCategory }: ProductGridProps) {
   const { data: session } = useSession();
+  const { showToast } = useToast();
   const [wishlisted, setWishlisted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -52,18 +54,26 @@ export default function ProductGrid({ categories, products, activeCategory }: Pr
       return next;
     });
     try {
-      await fetch('/api/wishlist', {
+      const res = await fetch('/api/wishlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),
       });
+      if (!res.ok) {
+        setWishlisted((prev) => {
+          const next = new Set(prev);
+          if (isCurrentlyWishlisted) next.add(productId); else next.delete(productId);
+          return next;
+        });
+        showToast('Could not update your wishlist.', 'error');
+      }
     } catch {
-      // revert on failure
       setWishlisted((prev) => {
         const next = new Set(prev);
         if (isCurrentlyWishlisted) next.add(productId); else next.delete(productId);
         return next;
       });
+      showToast('Unable to connect to the server.', 'error');
     }
   };
 

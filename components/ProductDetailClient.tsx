@@ -2,11 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { fileToBase64, uploadIfNew } from '@/lib/uploadImage';
 import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
+import { useAuthPrompt } from './AuthPromptProvider';
+import { useToast } from './ui/Toast';
 
 interface Review {
   _id: string;
@@ -64,6 +67,8 @@ export default function ProductDetailClient({
 }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { requireAuth } = useAuthPrompt();
+  const { showToast } = useToast();
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -122,31 +127,36 @@ export default function ProductDetailClient({
     }
   }, [productId]);
 
-  const toggleWishlist = async () => {
-    if (!session) {
-      router.push('/');
-      return;
-    }
+  const doToggleWishlist = async () => {
     setWishlistLoading(true);
     const prev = isWishlisted;
     setIsWishlisted(!prev);
     try {
-      await fetch('/api/wishlist', {
+      const res = await fetch('/api/wishlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),
       });
+      if (!res.ok) {
+        setIsWishlisted(prev);
+        showToast('Could not update your wishlist.', 'error');
+      }
     } catch {
       setIsWishlisted(prev);
+      showToast('Unable to connect to the server.', 'error');
     }
     setWishlistLoading(false);
   };
 
-  const handleAddToCart = async () => {
+  const toggleWishlist = () => {
     if (!session) {
-      router.push('/');
+      requireAuth(doToggleWishlist, 'Sign in to save items to your wishlist.');
       return;
     }
+    doToggleWishlist();
+  };
+
+  const doAddToCart = async () => {
     setAddingToCart(true);
     setCartMessage('');
     try {
@@ -168,12 +178,24 @@ export default function ProductDetailClient({
     setAddingToCart(false);
   };
 
-  const handleBuyNow = () => {
+  const handleAddToCart = () => {
     if (!session) {
-      router.push('/');
+      requireAuth(doAddToCart, `Sign in to add "${name}" to your basket.`);
       return;
     }
+    doAddToCart();
+  };
+
+  const doBuyNow = () => {
     router.push(`/checkout?buyNow=1&productId=${productId}&quantity=${quantity}`);
+  };
+
+  const handleBuyNow = () => {
+    if (!session) {
+      requireAuth(doBuyNow, `Sign in to buy "${name}" now.`);
+      return;
+    }
+    doBuyNow();
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -216,11 +238,7 @@ export default function ProductDetailClient({
     setMyReviewImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleToggleLike = async (reviewId: string) => {
-    if (!session) {
-      router.push('/');
-      return;
-    }
+  const doToggleLike = async (reviewId: string) => {
     setReviews((prev) => prev.map((r) => r._id === reviewId
       ? { ...r, likedByMe: !r.likedByMe, likeCount: (r.likeCount || 0) + (r.likedByMe ? -1 : 1) }
       : r));
@@ -229,17 +247,23 @@ export default function ProductDetailClient({
       const data = await res.json();
       if (res.ok) {
         setReviews((prev) => prev.map((r) => r._id === reviewId ? { ...r, likedByMe: data.liked, likeCount: data.likeCount } : r));
+      } else {
+        showToast('Could not update your like.', 'error');
       }
     } catch {
-      // ignore, optimistic state stays
+      showToast('Unable to connect to the server.', 'error');
     }
   };
 
-  const handleChatClick = async () => {
+  const handleToggleLike = (reviewId: string) => {
     if (!session) {
-      router.push('/');
+      requireAuth(() => doToggleLike(reviewId), 'Sign in to like a review.');
       return;
     }
+    doToggleLike(reviewId);
+  };
+
+  const doStartChat = async () => {
     setStartingChat(true);
     try {
       const res = await fetch('/api/chat/start', {
@@ -250,11 +274,21 @@ export default function ProductDetailClient({
       const data = await res.json();
       if (res.ok) {
         router.push(`/messages/${data.conversationId}`);
+      } else {
+        showToast(data.message || 'Could not start a conversation.', 'error');
       }
     } catch {
-      // ignore
+      showToast('Unable to connect to the server.', 'error');
     }
     setStartingChat(false);
+  };
+
+  const handleChatClick = () => {
+    if (!session) {
+      requireAuth(doStartChat, `Sign in to chat with ${sellerName}.`);
+      return;
+    }
+    doStartChat();
   };
 
   const galleryImages = images.length > 0 ? images : [];
@@ -278,7 +312,18 @@ export default function ProductDetailClient({
               🌱 {timeAgo(createdAt)}
             </span>
             {galleryImages[selectedImage] ? (
-              <img src={galleryImages[selectedImage]} alt={name} className="max-w-full max-h-full object-contain" />
+              galleryImages[selectedImage].startsWith('http') ? (
+                <Image
+                  src={galleryImages[selectedImage]}
+                  alt={name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-contain"
+                  preload={selectedImage === 0}
+                />
+              ) : (
+                <img src={galleryImages[selectedImage]} alt={name} className="max-w-full max-h-full object-contain" />
+              )
             ) : (
               <span className="text-7xl">🛒</span>
             )}
@@ -290,11 +335,15 @@ export default function ProductDetailClient({
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
-                  className={`w-16 h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                  className={`relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
                     selectedImage === i ? 'border-basil' : 'border-white/60 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt={`${name} ${i}`} className="w-full h-full object-cover" />
+                  {img.startsWith('http') ? (
+                    <Image src={img} alt={`${name} ${i}`} fill sizes="64px" className="object-cover" />
+                  ) : (
+                    <img src={img} alt={`${name} ${i}`} className="w-full h-full object-cover" />
+                  )}
                 </button>
               ))}
             </div>

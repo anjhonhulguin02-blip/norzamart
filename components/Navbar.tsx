@@ -4,20 +4,16 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import NotificationBell from './NotificationBell';
 import { getPusherClient } from '@/lib/pusherClient';
+import { useAuthPrompt } from './AuthPromptProvider';
 
 export default function Navbar() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { openAuthModal } = useAuthPrompt();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
@@ -124,47 +120,6 @@ export default function Navbar() {
     router.push(`/search?q=${encodeURIComponent(term)}`);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setIsSubmitting(true);
-
-    if (authView === 'login') {
-      const res = await signIn('credentials', {
-        redirect: false,
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (res?.error) {
-        setError(res.error === "CredentialsSignin" ? "Invalid email or password. Please try again." : res.error);
-      } else {
-        setIsModalOpen(false);
-        window.location.reload();
-      }
-    } else {
-      try {
-        const res = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-
-        if (res.ok) {
-          setSuccess('Registration successful! You can now log in.');
-          setAuthView('login');
-        } else {
-          const data = await res.json();
-          setError(data.message || 'An error occurred during registration.');
-        }
-      } catch {
-        setError('Unable to connect to the server.');
-      }
-    }
-    setIsSubmitting(false);
-  };
-
   const handleSellClick = async () => {
     setIsProfileOpen(false);
     try {
@@ -181,20 +136,19 @@ export default function Navbar() {
   };
 
   return (
-    <>
       <motion.header
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="w-full bg-white/50 backdrop-blur-xl border-b border-white/60 sticky top-0 z-50 shadow-[0_4px_30px_rgba(15,81,50,0.06)]"
       >
-        <div className="max-w-7xl mx-auto px-4 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-3 md:py-3.5 flex flex-row flex-wrap md:flex-nowrap items-center justify-between gap-3 md:gap-4">
 
-          <Link href="/" className="font-display text-2xl font-semibold tracking-tight text-basil flex items-center gap-1">
+          <Link href="/" className="order-1 font-display text-2xl font-semibold tracking-tight text-basil flex items-center gap-1">
             Norza<span className="text-tomato">Mart</span>
           </Link>
 
-          <div className="w-full md:w-1/2 relative">
+          <div className="order-3 md:order-2 w-full md:w-1/2 relative">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -295,7 +249,7 @@ export default function Navbar() {
             </AnimatePresence>
           </div>
 
-          <div className="flex items-center gap-5 text-sm font-semibold text-ink">
+          <div className="order-2 md:order-3 flex items-center gap-3 md:gap-5 text-sm font-semibold text-ink">
             {session ? (
               <div className="relative">
                 <button
@@ -309,7 +263,7 @@ export default function Navbar() {
                       (session.user?.name || 'C').charAt(0).toUpperCase()
                     )}
                   </span>
-                  <span className="text-ink font-bold text-sm">{session.user?.name || 'Customer'}</span>
+                  <span className="hidden md:inline text-ink font-bold text-sm">{session.user?.name || 'Customer'}</span>
                   <span className="text-ink/40 text-xs">▾</span>
                 </button>
 
@@ -320,7 +274,7 @@ export default function Navbar() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl overflow-hidden z-50"
+                      className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 mt-2 w-[calc(100vw-2rem)] max-w-56 sm:w-56 bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl overflow-hidden z-50"
                     >
                       <Link
                         href="/dashboard"
@@ -356,7 +310,7 @@ export default function Navbar() {
               </div>
             ) : (
               <button
-                onClick={() => { setIsModalOpen(true); setAuthView('login'); setError(''); setSuccess(''); }}
+                onClick={() => openAuthModal('login')}
                 className="bg-transparent border-none cursor-pointer font-semibold text-ink hover:text-basil transition-colors outline-none"
               >
                 Sign In / Register
@@ -400,100 +354,5 @@ export default function Navbar() {
           </div>
         </div>
       </motion.header>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 top-0 left-0 w-screen h-screen bg-ink/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
-          <motion.div
-            initial={{ scale: 0.94, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="bg-white/90 backdrop-blur-lg border border-white/60 shadow-2xl rounded-3xl w-full max-w-md p-8 relative mx-4"
-          >
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 text-ink/40 hover:text-ink text-lg font-bold bg-transparent border-none cursor-pointer outline-none transition-colors"
-            >
-              ✕
-            </button>
-
-            <h2 className="font-display text-2xl font-semibold text-center text-basil mb-1">
-              {authView === 'login' ? 'Welcome Back!' : 'Create Account'}
-            </h2>
-            <p className="text-xs text-ink/50 text-center mb-6 font-body">
-              {authView === 'login' ? 'Sign in for a faster checkout experience at NorzaMart.' : 'Join our community for fresh produce and daily groceries.'}
-            </p>
-
-            {error && <div className="bg-tomato/10 border border-tomato/20 text-tomato text-xs font-semibold rounded-xl p-3 mb-4 text-center">{error}</div>}
-            {success && <div className="bg-basil/10 border border-basil/20 text-basil text-xs font-semibold rounded-xl p-3 mb-4 text-center">{success}</div>}
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {authView === 'register' && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Juan Dela Cruz"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 text-gray-800"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="juandelacruz@gmail.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 text-gray-800"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-gray-700">Password</label>
-                  {authView === 'login' && (
-                    <Link
-                      href="/forgot-password"
-                      onClick={() => setIsModalOpen(false)}
-                      className="text-[11px] font-bold text-emerald-700 hover:underline"
-                    >
-                      Forgot password?
-                    </Link>
-                  )}
-                </div>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 text-gray-800"
-                />
-              </div>
-
-              <button type="submit" disabled={isSubmitting} className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 text-white font-bold py-3 rounded-xl shadow-md mt-2 text-sm transition-all tracking-wide border-none cursor-pointer">
-                {isSubmitting ? 'Please wait…' : authView === 'login' ? 'Sign In' : 'Sign Up'}
-              </button>
-            </form>
-
-            <p className="text-center text-xs text-gray-600 mt-6">
-              {authView === 'login' ? "Don't have an account yet? " : "Already have an account? "}
-              <button
-                type="button"
-                onClick={() => { setAuthView(authView === 'login' ? 'register' : 'login'); setError(''); setSuccess(''); }}
-                className="text-emerald-700 font-extrabold hover:underline cursor-pointer bg-transparent border-none p-0 outline-none"
-              >
-                {authView === 'login' ? 'Register here' : 'Login here'}
-              </button>
-            </p>
-          </motion.div>
-        </div>
-      )}
-    </>
   );
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
+import { useToast } from '@/components/ui/Toast';
 
 interface WishlistItem {
   _id: string;
@@ -20,9 +21,11 @@ interface WishlistItem {
 }
 
 export default function WishlistPage() {
+  const { showToast } = useToast();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   const fetchWishlist = async () => {
     const res = await fetch('/api/wishlist');
@@ -35,22 +38,42 @@ export default function WishlistPage() {
 
   const removeItem = async (productId: string, itemId: string) => {
     setRemovingId(itemId);
-    await fetch('/api/wishlist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId }),
-    });
-    setItems((prev) => prev.filter((i) => i._id !== itemId));
+    try {
+      const res = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId }),
+      });
+      if (res.ok) {
+        setItems((prev) => prev.filter((i) => i._id !== itemId));
+      } else {
+        showToast('Could not remove item from your wishlist.', 'error');
+      }
+    } catch {
+      showToast('Unable to connect to the server.', 'error');
+    }
     setRemovingId(null);
   };
 
-  const addToCart = async (productId: string) => {
-    await fetch('/api/cart', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId, quantity: 1 }),
-    });
-    window.dispatchEvent(new Event('cart-updated'));
+  const addToCart = async (productId: string, productName: string) => {
+    setAddingId(productId);
+    try {
+      const res = await fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, quantity: 1 }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`${productName} added to basket!`, 'success');
+        window.dispatchEvent(new Event('cart-updated'));
+      } else {
+        showToast(data.message || 'Could not add to basket.', 'error');
+      }
+    } catch {
+      showToast('Unable to connect to the server.', 'error');
+    }
+    setAddingId(null);
   };
 
   return (
@@ -96,11 +119,11 @@ export default function WishlistPage() {
                 </Link>
                 <div className="flex gap-2 mt-3">
                   <button
-                    onClick={() => addToCart(item.product._id)}
-                    disabled={item.product.stock === 0}
+                    onClick={() => addToCart(item.product._id, item.product.name)}
+                    disabled={item.product.stock === 0 || addingId === item.product._id}
                     className="flex-1 bg-basil hover:bg-basil-light disabled:opacity-50 text-white text-xs font-bold py-2 rounded-lg transition-all"
                   >
-                    Add to Basket
+                    {addingId === item.product._id ? 'Adding…' : 'Add to Basket'}
                   </button>
                   <button
                     onClick={() => removeItem(item.product._id, item._id)}

@@ -3,6 +3,8 @@ import { Fraunces, Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "../components/AuthProvider";
 import ToastProvider from "../components/ui/Toast";
+import AuthPromptProvider from "../components/AuthPromptProvider";
+import { BASE_URL } from "../lib/siteUrl";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -20,7 +22,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const BASE_URL = process.env.NEXTAUTH_URL || "https://norzamart.vercel.app";
 const SITE_DESCRIPTION =
   "Fresh vegetables, meat, and daily groceries from local sellers in Norzagaray, Bulacan — delivered same-day.";
 
@@ -31,6 +32,9 @@ export const metadata: Metadata = {
     template: "%s | NorzaMart",
   },
   description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
   keywords: [
     "Norzagaray",
     "Bulacan",
@@ -55,6 +59,18 @@ export const metadata: Metadata = {
   },
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "NorzaMart",
+  url: BASE_URL,
+  description: SITE_DESCRIPTION,
+  areaServed: {
+    "@type": "City",
+    name: "Norzagaray, Bulacan",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -66,8 +82,14 @@ export default function RootLayout({
       className={`${fraunces.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-body bg-cream-mist text-ink">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <AuthPromptProvider>{children}</AuthPromptProvider>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
