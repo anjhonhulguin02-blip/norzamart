@@ -172,7 +172,7 @@ export default function Navbar() {
                 placeholder="Search for fresh vegetables, meat, or daily groceries..."
                 className="bg-transparent w-full focus:outline-none text-sm text-ink placeholder-ink/40 font-body"
               />
-              <button type="submit" className="text-basil/70 hover:text-basil transition-colors" aria-label="Search">
+              <button type="submit" className="text-basil/70 hover:text-basil transition-colors p-2 -m-2 shrink-0" aria-label="Search">
                 🔍
               </button>
             </form>
@@ -325,7 +325,7 @@ export default function Navbar() {
             ) : (
               <button
                 onClick={() => openAuthModal('login')}
-                className="bg-transparent border-none cursor-pointer font-semibold text-ink hover:text-basil transition-colors outline-none"
+                className="bg-transparent border-none cursor-pointer font-semibold text-ink hover:text-basil transition-colors outline-none py-2.5"
               >
                 Sign In / Register
               </button>
