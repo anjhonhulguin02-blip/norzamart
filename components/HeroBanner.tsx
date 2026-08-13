@@ -106,7 +106,7 @@ export default function HeroBanner() {
               onClick={() => setShowAll(!showAll)}
               className="text-xs sm:text-sm font-bold text-white bg-tomato/90 hover:bg-tomato px-3.5 py-2 rounded-full transition-all whitespace-nowrap"
             >
-              {showAll ? '← Show less' : `View all ${barangays.length} →`}
+              {showAll ? '← Show less' : `View all ${barangays.length || 13} →`}
             </button>
           </div>
         </div>
