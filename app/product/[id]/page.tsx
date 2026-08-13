@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from 'next';
+import { BASE_URL } from '@/lib/siteUrl';
 
 void Seller;
 
@@ -37,6 +38,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title,
     description,
+    alternates: {
+      canonical: `/product/${id}`,
+    },
     openGraph: {
       title,
       description,
@@ -72,8 +76,40 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const galleryImages = [product.image, ...(product.images || [])].filter(Boolean);
   const deliveryBarangays = (product.availableBarangays?.length ? product.availableBarangays : product.seller?.deliveryBarangays) || [];
 
+  const linkableImages = galleryImages.filter((img: string) => /^https?:\/\//.test(img));
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description || undefined,
+    image: linkableImages.length ? linkableImages : undefined,
+    category: product.category || undefined,
+    sku: product._id.toString(),
+    offers: {
+      "@type": "Offer",
+      url: `${BASE_URL}/product/${product._id.toString()}`,
+      priceCurrency: "PHP",
+      price: product.price,
+      availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      seller: product.seller?.storeName ? { "@type": "Organization", name: product.seller.storeName } : undefined,
+    },
+  };
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
+      ...(product.category
+        ? [{ "@type": "ListItem", position: 2, name: product.category, item: `${BASE_URL}/search?category=${encodeURIComponent(product.category)}` }]
+        : []),
+      { "@type": "ListItem", position: product.category ? 3 : 2, name: product.name, item: `${BASE_URL}/product/${product._id.toString()}` },
+    ],
+  };
+
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <Navbar />
       <ProductDetailClient
         productId={product._id.toString()}

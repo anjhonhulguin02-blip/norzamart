@@ -2,8 +2,7 @@ import type { MetadataRoute } from "next";
 import connectToDatabase from "@/lib/mongodb";
 import Product from "@/lib/models/product";
 import Seller from "@/lib/models/seller";
-
-const BASE_URL = process.env.NEXTAUTH_URL || "https://norzamart.vercel.app";
+import { BASE_URL } from "@/lib/siteUrl";
 
 const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/`, changeFrequency: "daily", priority: 1 },

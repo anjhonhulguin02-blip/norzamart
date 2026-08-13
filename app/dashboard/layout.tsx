@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import BuyerSidebar, { buyerNavItems } from "@/components/buyer/BuyerSidebar";
 import DashboardMobileTopbar from "@/components/DashboardMobileTopbar";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function BuyerDashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);

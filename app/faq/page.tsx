@@ -2,7 +2,7 @@ import Navbar from '@/components/Navbar';
 import SiteFooter from '@/components/SiteFooter';
 import FaqAccordion from '@/components/FaqAccordion';
 
-export const metadata = { title: 'FAQ — NorzaMart' };
+export const metadata = { title: 'FAQ — NorzaMart', alternates: { canonical: '/faq' } };
 
 const FAQS = [
   {
@@ -39,9 +39,20 @@ const FAQS = [
   },
 ];
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.question,
+    acceptedAnswer: { "@type": "Answer", text: f.answer },
+  })),
+};
+
 export default function FaqPage() {
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 flex flex-col justify-between">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <div>
         <Navbar />
         <div className="max-w-3xl mx-auto px-4 py-14">

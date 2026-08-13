@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const BASE_URL = process.env.NEXTAUTH_URL || "https://norzamart.vercel.app";
+import { BASE_URL } from "@/lib/siteUrl";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -18,6 +17,7 @@ export default function robots(): MetadataRoute.Robots {
         "/checkout",
         "/forgot-password",
         "/reset-password",
+        "/verify-email",
       ],
     },
     sitemap: `${BASE_URL}/sitemap.xml`,
