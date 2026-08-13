@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { getPusherClient } from '@/lib/pusherClient';
 import { useToast } from './ui/Toast';
+import { useAnchoredMenuPosition } from '@/lib/useAnchoredMenuPosition';
 
 interface Notif {
   _id: string;
@@ -42,6 +44,10 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const { pos, measure } = useAnchoredMenuPosition(buttonRef);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const fetchNotifs = async () => {
     if (!session) return;
@@ -84,6 +90,7 @@ export default function NotificationBell() {
   }, [(session?.user as any)?.id]);
 
   const handleOpen = async () => {
+    if (!open) measure(320);
     setOpen(!open);
     if (!open && unreadCount > 0) {
       await fetch('/api/notifications/mark-read', { method: 'PUT' });
@@ -94,9 +101,54 @@ export default function NotificationBell() {
 
   if (!session) return null;
 
+  const menu = mounted && createPortal(
+    <AnimatePresence>
+      {open && pos && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+            style={{ top: pos.top, left: pos.left, width: pos.width }}
+            className="fixed max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl z-50"
+          >
+            <div className="px-4 py-3 border-b border-ink/10">
+              <p className="font-display font-semibold text-basil text-sm">Notifications</p>
+            </div>
+            {notifs.length === 0 ? (
+              <p className="text-ink/50 text-xs font-body p-6 text-center">No notifications yet.</p>
+            ) : (
+              notifs.map((n) => (
+                <Link
+                  key={n._id}
+                  href={n.link || '#'}
+                  onClick={() => setOpen(false)}
+                  className={`flex gap-3 px-4 py-3 hover:bg-basil/5 transition-colors border-b border-ink/5 last:border-0 ${
+                    !n.read ? 'bg-basil/5' : ''
+                  }`}
+                >
+                  <span className="text-lg shrink-0">{TYPE_ICON[n.type] || '🔔'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-ink">{n.title}</p>
+                    {n.body && <p className="text-ink/50 text-[11px] mt-0.5 truncate">{n.body}</p>}
+                    <p className="text-ink/30 text-[10px] mt-0.5">{timeAgo(n.createdAt)}</p>
+                  </div>
+                </Link>
+              ))
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         onClick={handleOpen}
         aria-label="Notifications"
         className="relative cursor-pointer bg-white/70 hover:bg-white text-basil w-10 h-10 rounded-full flex items-center justify-center border border-white/70 shadow-sm transition-all"
@@ -108,46 +160,7 @@ export default function NotificationBell() {
           </span>
         )}
       </button>
-
-      <AnimatePresence>
-        {open && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
-              className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 sm:w-80 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl z-50"
-            >
-              <div className="px-4 py-3 border-b border-ink/10">
-                <p className="font-display font-semibold text-basil text-sm">Notifications</p>
-              </div>
-              {notifs.length === 0 ? (
-                <p className="text-ink/50 text-xs font-body p-6 text-center">No notifications yet.</p>
-              ) : (
-                notifs.map((n) => (
-                  <Link
-                    key={n._id}
-                    href={n.link || '#'}
-                    onClick={() => setOpen(false)}
-                    className={`flex gap-3 px-4 py-3 hover:bg-basil/5 transition-colors border-b border-ink/5 last:border-0 ${
-                      !n.read ? 'bg-basil/5' : ''
-                    }`}
-                  >
-                    <span className="text-lg shrink-0">{TYPE_ICON[n.type] || '🔔'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-ink">{n.title}</p>
-                      {n.body && <p className="text-ink/50 text-[11px] mt-0.5 truncate">{n.body}</p>}
-                      <p className="text-ink/30 text-[10px] mt-0.5">{timeAgo(n.createdAt)}</p>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {menu}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +9,7 @@ import { signOut, useSession } from 'next-auth/react';
 import NotificationBell from './NotificationBell';
 import { getPusherClient } from '@/lib/pusherClient';
 import { useAuthPrompt } from './AuthPromptProvider';
+import { useAnchoredMenuPosition } from '@/lib/useAnchoredMenuPosition';
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -15,6 +17,10 @@ export default function Navbar() {
   const { openAuthModal } = useAuthPrompt();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const { pos: profilePos, measure: measureProfilePos } = useAnchoredMenuPosition(profileButtonRef);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [cartCount, setCartCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -253,7 +259,8 @@ export default function Navbar() {
             {session ? (
               <div className="relative">
                 <button
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  ref={profileButtonRef}
+                  onClick={() => { if (!isProfileOpen) measureProfilePos(224); setIsProfileOpen(!isProfileOpen); }}
                   className="flex items-center gap-2 bg-white/60 hover:bg-white/80 border border-white/70 rounded-full pl-2 pr-3 py-1.5 transition-all"
                 >
                   <span className="w-7 h-7 rounded-full bg-basil text-white flex items-center justify-center text-xs font-bold overflow-hidden">
@@ -267,46 +274,53 @@ export default function Navbar() {
                   <span className="text-ink/40 text-xs">▾</span>
                 </button>
 
-                <AnimatePresence>
-                  {isProfileOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 mt-2 w-[calc(100vw-2rem)] max-w-56 sm:w-56 bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl overflow-hidden z-50"
-                    >
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-ink hover:bg-basil/5 transition-colors flex items-center gap-2"
-                      >
-                        🏠 My Dashboard
-                      </Link>
-                      <Link
-                        href="/profile"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-ink hover:bg-basil/5 transition-colors flex items-center gap-2"
-                      >
-                        ⚙️ Account Settings
-                      </Link>
-                      <div className="h-px bg-ink/10" />
-                      <button
-                        onClick={handleSellClick}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-ink hover:bg-basil/5 transition-colors flex items-center gap-2"
-                      >
-                        🏬 Sell on NorzaMart
-                      </button>
-                      <div className="h-px bg-ink/10" />
-                      <button
-                        onClick={() => { setIsProfileOpen(false); signOut({ callbackUrl: '/' }); }}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-tomato hover:bg-tomato/5 transition-colors"
-                      >
-                        Sign Out
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {mounted && createPortal(
+                  <AnimatePresence>
+                    {isProfileOpen && profilePos && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.15 }}
+                          style={{ top: profilePos.top, left: profilePos.left, width: profilePos.width }}
+                          className="fixed bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl overflow-hidden z-50"
+                        >
+                          <Link
+                            href="/dashboard"
+                            onClick={() => setIsProfileOpen(false)}
+                            className="w-full text-left px-4 py-3 text-sm font-semibold text-ink hover:bg-basil/5 transition-colors flex items-center gap-2"
+                          >
+                            🏠 My Dashboard
+                          </Link>
+                          <Link
+                            href="/profile"
+                            onClick={() => setIsProfileOpen(false)}
+                            className="w-full text-left px-4 py-3 text-sm font-semibold text-ink hover:bg-basil/5 transition-colors flex items-center gap-2"
+                          >
+                            ⚙️ Account Settings
+                          </Link>
+                          <div className="h-px bg-ink/10" />
+                          <button
+                            onClick={handleSellClick}
+                            className="w-full text-left px-4 py-3 text-sm font-semibold text-ink hover:bg-basil/5 transition-colors flex items-center gap-2"
+                          >
+                            🏬 Sell on NorzaMart
+                          </button>
+                          <div className="h-px bg-ink/10" />
+                          <button
+                            onClick={() => { setIsProfileOpen(false); signOut({ callbackUrl: '/' }); }}
+                            className="w-full text-left px-4 py-3 text-sm font-semibold text-tomato hover:bg-tomato/5 transition-colors"
+                          >
+                            Sign Out
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>,
+                  document.body
+                )}
               </div>
             ) : (
               <button
