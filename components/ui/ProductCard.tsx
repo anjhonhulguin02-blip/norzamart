@@ -160,7 +160,7 @@ export default function ProductCard({
 
       <div className="relative w-full h-32 sm:h-40 bg-white/50 shadow-inner rounded-xl flex items-center justify-center text-4xl mb-3 overflow-hidden group-hover:scale-105 transition-transform duration-300">
         {p.image?.startsWith('http') ? (
-          <Image src={p.image} alt={p.name} fill sizes="(max-width: 640px) 45vw, 220px" className="object-contain" />
+          <Image src={p.image} alt={p.name} fill sizes="(max-width: 639px) 92vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 23vw, 230px" className="object-contain" />
         ) : isImageUrl(p.image) ? (
           <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
         ) : (

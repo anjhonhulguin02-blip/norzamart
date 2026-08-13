@@ -98,7 +98,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
       <div className="relative w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden mb-3">
         {p.image ? (
           p.image.startsWith('http') ? (
-            <Image src={p.image} alt={p.name} fill sizes="(max-width: 640px) 45vw, 220px" className="object-contain" />
+            <Image src={p.image} alt={p.name} fill sizes="(max-width: 639px) 92vw, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, 260px" className="object-contain" />
           ) : (
             <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
           )
@@ -159,7 +159,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         {topRated.length > 0 && (
           <>
             <h2 className="font-display text-xl font-semibold text-ink mt-10 mb-4">⭐ Top Rated</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {topRated.map((p: any) => <ProductCard key={p._id.toString()} p={p} />)}
             </div>
           </>
@@ -168,7 +168,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         {newArrivals.length > 0 && (
           <>
             <h2 className="font-display text-xl font-semibold text-ink mt-10 mb-4">🌱 New Arrivals</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {newArrivals.map((p: any) => <ProductCard key={p._id.toString()} p={p} />)}
             </div>
           </>
@@ -179,7 +179,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         {products.length === 0 ? (
           <p className="text-ink/50 text-sm font-body">No products listed yet.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {products.map((p: any) => <ProductCard key={p._id.toString()} p={p} />)}
           </div>
         )}
