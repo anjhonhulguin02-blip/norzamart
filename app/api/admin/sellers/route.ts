@@ -8,6 +8,6 @@ export async function GET() {
   if (!session) return NextResponse.json({ message: "Not authorized." }, { status: 403 });
 
   await connectToDatabase();
-  const sellers = await Seller.find({}).sort({ createdAt: -1 });
+  const sellers = await Seller.find({}).select("-governmentId").sort({ createdAt: -1 });
   return NextResponse.json({ sellers });
 }

@@ -6,9 +6,11 @@ import Follow from '@/lib/models/follow';
 import Navbar from '@/components/Navbar';
 import FollowButton from '@/components/FollowButton';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
+import { BASE_URL } from '@/lib/siteUrl';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -32,6 +34,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title,
     description,
+    alternates: {
+      canonical: `/seller/${id}`,
+    },
     openGraph: {
       title,
       description,
@@ -51,7 +56,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
   const { id } = await params;
   await connectToDatabase();
 
-  const seller = await Seller.findById(id).lean() as any;
+  const seller = await Seller.findById(id).select('-governmentId').lean() as any;
   if (!seller) {
     notFound();
   }
@@ -90,9 +95,13 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
       href={`/product/${p._id}`}
       className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all"
     >
-      <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden mb-3">
+      <div className="relative w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden mb-3">
         {p.image ? (
-          <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
+          p.image.startsWith('http') ? (
+            <Image src={p.image} alt={p.name} fill sizes="(max-width: 640px) 45vw, 220px" className="object-contain" />
+          ) : (
+            <img src={p.image} alt={p.name} className="max-w-full max-h-full object-contain" />
+          )
         ) : (
           <span className="text-4xl">🛒</span>
         )}
@@ -102,15 +111,29 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
     </Link>
   );
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: seller.storeName, item: `${BASE_URL}/seller/${id}` },
+    ],
+  };
+
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-10">
 
         <div className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-3xl p-8 shadow-lg flex flex-col sm:flex-row items-start sm:items-center gap-5">
-          <div className="w-20 h-20 rounded-2xl bg-basil/10 flex items-center justify-center overflow-hidden shrink-0">
+          <div className="relative w-20 h-20 rounded-2xl bg-basil/10 flex items-center justify-center overflow-hidden shrink-0">
             {seller.storeLogo ? (
-              <img src={seller.storeLogo} alt={seller.storeName} className="w-full h-full object-cover" />
+              seller.storeLogo.startsWith('http') ? (
+                <Image src={seller.storeLogo} alt={seller.storeName} fill sizes="80px" className="object-cover" />
+              ) : (
+                <img src={seller.storeLogo} alt={seller.storeName} className="w-full h-full object-cover" />
+              )
             ) : (
               <span className="text-3xl">🏬</span>
             )}

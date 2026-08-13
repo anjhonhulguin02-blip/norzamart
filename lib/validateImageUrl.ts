@@ -20,3 +20,14 @@ export function invalidImageArrayMessage(values: unknown, label: string): string
   }
   return null;
 }
+
+/** For assets uploaded as Cloudinary "authenticated" resources (e.g. government IDs),
+ * which come back as a bare public_id rather than a public URL — just confirms it went
+ * through our upload endpoint instead of being raw client-submitted image data. */
+export function invalidPrivateAssetMessage(value: unknown, label: string): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string" || value.startsWith("data:") || value.startsWith("http")) {
+    return `${label} must be an uploaded image, not raw image data.`;
+  }
+  return null;
+}

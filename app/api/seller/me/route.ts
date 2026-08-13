@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   await connectToDatabase();
-  const seller = await Seller.findOne({ user: (session.user as any).id });
+  const seller = await Seller.findOne({ user: (session.user as any).id }).select("-governmentId");
 
   return NextResponse.json({ isSeller: !!seller, seller: seller || null });
 }

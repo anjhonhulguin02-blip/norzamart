@@ -11,36 +11,44 @@ const SECTIONS = [
     method you select. Sellers additionally provide store information and a government ID for verification.`,
   },
   {
-    title: '2. How We Use Your Information',
+    title: '2. Seller Government ID Verification',
+    body: `To sell on NorzaMart, sellers upload a government-issued ID so we can confirm they're a real person
+    before their store goes live. This document is stored privately — it is never given a public URL and cannot
+    be viewed by other sellers, buyers, or search engines. Only NorzaMart admins reviewing a store application
+    can access it, through an access-controlled tool that records who viewed it and when. It is kept only for as
+    long as the seller account remains active, and consent is collected at the time of upload.`,
+  },
+  {
+    title: '3. How We Use Your Information',
     body: `We use your information to process orders, connect you with sellers, show you products available in
     your barangay, send order and account notifications, and improve the marketplace. We do not sell your
     personal information to third parties.`,
   },
   {
-    title: '3. Sharing With Sellers',
+    title: '4. Sharing With Sellers',
     body: `When you place an order, the seller you're buying from receives your name, delivery address, and
     contact details needed to fulfill that order. Sellers cannot see your information unless you've interacted
     with their store (ordered, messaged, or reviewed a product).`,
   },
   {
-    title: '4. Data Storage & Security',
+    title: '5. Data Storage & Security',
     body: `Your data is stored on secured cloud infrastructure. Passwords are encrypted and never stored in
     plain text. While we take reasonable steps to protect your information, no online platform can guarantee
     absolute security.`,
   },
   {
-    title: '5. Your Choices',
+    title: '6. Your Choices',
     body: `You can review and update your personal information, delivery preferences, and notification settings
     at any time from your Account Settings page. You may also request account deactivation by contacting
     support.`,
   },
   {
-    title: '6. Cookies',
+    title: '7. Cookies',
     body: `NorzaMart uses essential cookies to keep you signed in and remember your cart. We do not use
     third-party advertising trackers.`,
   },
   {
-    title: '7. Changes to This Policy',
+    title: '8. Changes to This Policy',
     body: `We may update this policy as NorzaMart grows. Significant changes will be communicated through the
     platform.`,
   },

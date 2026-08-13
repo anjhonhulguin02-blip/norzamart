@@ -15,7 +15,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   await connectToDatabase();
-  const seller = await Seller.findByIdAndUpdate(id, { status }, { new: true });
+  const seller = await Seller.findByIdAndUpdate(id, { status }, { new: true, select: "-governmentId" });
   if (!seller) return NextResponse.json({ message: "Seller not found." }, { status: 404 });
 
   await createNotification({

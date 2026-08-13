@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Dialog from '@/components/ui/Dialog';
+import { useToast } from '@/components/ui/Toast';
 
 interface Seller {
   _id: string;
@@ -13,10 +15,14 @@ interface Seller {
 }
 
 export default function AdminSellersPage() {
+  const { showToast } = useToast();
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [viewingUrl, setViewingUrl] = useState<string | null>(null);
+  const [viewingLoading, setViewingLoading] = useState(false);
 
   const fetchSellers = async () => {
     const res = await fetch('/api/admin/sellers');
@@ -36,6 +42,31 @@ export default function AdminSellersPage() {
     });
     setSellers((prev) => prev.map((s) => (s._id === id ? { ...s, status } : s)));
     setUpdatingId(null);
+  };
+
+  const viewGovernmentId = async (id: string, storeName: string) => {
+    setViewingId(id);
+    setViewingUrl(null);
+    setViewingLoading(true);
+    try {
+      const res = await fetch(`/api/admin/sellers/${id}/government-id`);
+      const data = await res.json();
+      if (res.ok) {
+        setViewingUrl(data.url);
+      } else {
+        showToast(data.message || `Could not load ${storeName}'s government ID.`, 'error');
+        setViewingId(null);
+      }
+    } catch {
+      showToast('Unable to connect to the server.', 'error');
+      setViewingId(null);
+    }
+    setViewingLoading(false);
+  };
+
+  const closeViewer = () => {
+    setViewingId(null);
+    setViewingUrl(null);
   };
 
   const filtered = filter === 'all' ? sellers : sellers.filter((s) => s.status === filter);
@@ -71,6 +102,13 @@ export default function AdminSellersPage() {
                 <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full capitalize ${
                   s.status === 'approved' ? 'bg-basil/15 text-basil' : s.status === 'rejected' ? 'bg-tomato/15 text-tomato' : 'bg-yellow-100 text-yellow-700'
                 }`}>{s.status}</span>
+                <button
+                  onClick={() => viewGovernmentId(s._id, s.storeName)}
+                  disabled={viewingLoading && viewingId === s._id}
+                  className="bg-ink/5 hover:bg-ink/10 text-ink/70 text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                >
+                  {viewingLoading && viewingId === s._id ? 'Loading…' : 'View ID'}
+                </button>
                 {s.status !== 'approved' && (
                   <button onClick={() => updateStatus(s._id, 'approved')} disabled={updatingId === s._id}
                     className="bg-basil/10 hover:bg-basil/20 text-basil text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50">
@@ -88,6 +126,18 @@ export default function AdminSellersPage() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!viewingId} onClose={closeViewer} title="Government ID" maxWidth="max-w-lg">
+        <p className="text-xs text-ink/50 text-center mb-4 font-body">
+          Viewing this document is logged for compliance purposes.
+        </p>
+        {viewingUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={viewingUrl} alt="Seller government ID" className="w-full rounded-xl border border-ink/10" />
+        ) : (
+          <p className="text-ink/50 text-sm text-center py-8">Loading document…</p>
+        )}
+      </Dialog>
     </div>
   );
 }

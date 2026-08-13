@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Seller from "@/lib/models/seller";
 import User from "@/lib/models/user";
-import { invalidImageMessage } from "@/lib/validateImageUrl";
+import { invalidImageMessage, invalidPrivateAssetMessage } from "@/lib/validateImageUrl";
 
 export async function POST(req: Request) {
   try {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     const imageError = invalidImageMessage(storeLogo, "Store logo")
       || invalidImageMessage(storeBanner, "Store banner")
-      || invalidImageMessage(governmentId, "Government ID");
+      || invalidPrivateAssetMessage(governmentId, "Government ID");
     if (imageError) {
       return NextResponse.json({ message: imageError }, { status: 400 });
     }
@@ -51,7 +51,8 @@ export async function POST(req: Request) {
 
     await User.findByIdAndUpdate((session.user as any).id, { role: "seller" });
 
-    return NextResponse.json({ message: "Seller account created!", seller }, { status: 201 });
+    const { governmentId: _governmentId, ...sellerWithoutGovernmentId } = seller.toObject();
+    return NextResponse.json({ message: "Seller account created!", seller: sellerWithoutGovernmentId }, { status: 201 });
   } catch (error) {
     console.error("SELLER REGISTER ERROR:", error);
     return NextResponse.json({ message: "Something went wrong while registering your store." }, { status: 500 });

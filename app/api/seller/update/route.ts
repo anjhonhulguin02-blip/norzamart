@@ -32,7 +32,7 @@ export async function PUT(req: Request) {
         storeDescription, deliveryBarangays, businessHours, facebook, instagram, website, estimatedDeliveryTime,
         gcashNumber, gcashName, bankName, bankAccountNumber, bankAccountName,
       },
-      { new: true }
+      { new: true, select: "-governmentId" }
     );
 
     if (!seller) {
