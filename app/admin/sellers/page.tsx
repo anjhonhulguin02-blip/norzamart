@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Dialog from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
 
@@ -64,10 +64,12 @@ export default function AdminSellersPage() {
     setViewingLoading(false);
   };
 
-  const closeViewer = () => {
+  // Memoized so Dialog's focus-management effect (which depends on this)
+  // doesn't tear down and re-run on every unrelated re-render of this page.
+  const closeViewer = useCallback(() => {
     setViewingId(null);
     setViewingUrl(null);
-  };
+  }, []);
 
   const filtered = filter === 'all' ? sellers : sellers.filter((s) => s.status === filter);
 

@@ -53,10 +53,16 @@ export default function AuthPromptProvider({ children }: { children: React.React
     setIsOpen(true);
   }, []);
 
-  const close = () => {
+  // Memoized so its identity stays stable across re-renders (e.g. every
+  // keystroke in the form, since typing updates formData state here). Dialog
+  // depends on this in a useEffect deps array to manage focus/scroll-lock —
+  // a fresh function reference on every render was making that effect tear
+  // down and re-run on every keystroke, yanking focus off the input each
+  // time and dismissing the on-screen keyboard on mobile.
+  const close = useCallback(() => {
     setIsOpen(false);
     setPendingAction(null);
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
