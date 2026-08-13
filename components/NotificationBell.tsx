@@ -118,7 +118,7 @@ export default function NotificationBell() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl z-50"
+              className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 sm:w-80 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl z-50"
             >
               <div className="px-4 py-3 border-b border-ink/10">
                 <p className="font-display font-semibold text-basil text-sm">Notifications</p>

@@ -284,16 +284,16 @@ export default function CheckoutPage() {
               {(selectedAddressId === 'new' || savedAddresses.length === 0) && (
                 <div className="flex flex-col gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-ink/70 mb-1">Barangay</label>
-                    <select required value={form.deliveryBarangay} onChange={(e) => setForm({ ...form, deliveryBarangay: e.target.value })}
+                    <label htmlFor="deliveryBarangay" className="block text-xs font-bold text-ink/70 mb-1">Barangay</label>
+                    <select id="deliveryBarangay" required value={form.deliveryBarangay} onChange={(e) => setForm({ ...form, deliveryBarangay: e.target.value })}
                       className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40">
                       <option value="">Select barangay</option>
                       {barangays.map((b) => <option key={b._id} value={b.name}>{b.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-ink/70 mb-1">Full Address</label>
-                    <textarea required rows={2} value={form.deliveryAddress} onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })}
+                    <label htmlFor="deliveryAddress" className="block text-xs font-bold text-ink/70 mb-1">Full Address</label>
+                    <textarea id="deliveryAddress" required rows={2} value={form.deliveryAddress} onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })}
                       placeholder="House no., street, landmark"
                       className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
                   </div>
@@ -348,14 +348,14 @@ export default function CheckoutPage() {
                   )}
 
                   <div>
-                    <label className="block text-xs font-bold text-ink/70 mb-1">Payment Reference Number</label>
-                    <input required value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)}
+                    <label htmlFor="paymentReference" className="block text-xs font-bold text-ink/70 mb-1">Payment Reference Number</label>
+                    <input id="paymentReference" required value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)}
                       placeholder="e.g. GCash reference number"
                       className="w-full bg-white border border-ink/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-basil/40" />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-ink/70 mb-1">Proof of Payment (screenshot)</label>
+                    <label htmlFor="paymentProof" className="block text-xs font-bold text-ink/70 mb-1">Proof of Payment (screenshot)</label>
                     {paymentProofImage ? (
                       <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-ink/10">
                         <img src={paymentProofImage} alt="Payment proof" className="w-full h-full object-cover" />
@@ -365,7 +365,7 @@ export default function CheckoutPage() {
                         </button>
                       </div>
                     ) : (
-                      <input type="file" accept="image/*" required
+                      <input id="paymentProof" type="file" accept="image/*" required
                         onChange={async (e) => { const f = e.target.files?.[0]; if (f) setPaymentProofImage(await fileToBase64(f)); }}
                         className="text-xs text-ink/70" />
                     )}

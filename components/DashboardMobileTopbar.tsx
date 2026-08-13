@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -21,7 +21,10 @@ interface Props {
 
 export default function DashboardMobileTopbar({ navItems, brandSuffix, dark = false }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const homeHref = navItems[0]?.href;
+  const showBack = homeHref !== undefined && pathname !== homeHref;
 
   // Relying only on each Link's onClick to close the drawer races against
   // Next's own navigation — sometimes the route change wins and the drawer is
@@ -97,10 +100,21 @@ export default function DashboardMobileTopbar({ navItems, brandSuffix, dark = fa
       <div className={`md:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3.5 border-b ${
         dark ? 'bg-ink text-white border-white/10' : 'bg-white/80 backdrop-blur-xl border-ink/10'
       }`}>
-        <Link href="/" className={`font-display text-lg font-semibold ${dark ? '' : 'text-basil'}`}>
-          Norza<span className="text-tomato">Mart</span>
-          {brandSuffix && <span className={`text-xs font-body font-normal ml-1 ${dark ? 'text-white/40' : 'text-ink/40'}`}>{brandSuffix}</span>}
-        </Link>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {showBack && (
+            <button
+              onClick={() => router.back()}
+              aria-label="Go back"
+              className={`w-8 h-8 -ml-1 flex items-center justify-center rounded-lg text-xl shrink-0 ${dark ? 'text-white' : 'text-ink'}`}
+            >
+              ←
+            </button>
+          )}
+          <Link href="/" className={`font-display text-lg font-semibold truncate ${dark ? '' : 'text-basil'}`}>
+            Norza<span className="text-tomato">Mart</span>
+            {brandSuffix && <span className={`text-xs font-body font-normal ml-1 ${dark ? 'text-white/40' : 'text-ink/40'}`}>{brandSuffix}</span>}
+          </Link>
+        </div>
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"

@@ -11,6 +11,12 @@
   --font-display: var(--font-fraunces);
   --font-body: var(--font-inter);
   --font-utility: var(--font-geist-mono);
+
+  /* Prices use font-mono site-wide. Some Android WebViews (e.g. Facebook's
+     in-app browser) have monospace fonts with no ₱ glyph, rendering it as a
+     tofu box — appending system-ui/sans-serif lets that one glyph fall back
+     to a font that has it, while digits/letters still render as monospace. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace, system-ui, sans-serif;
 }
 
 @keyframes float-slow {
@@ -38,4 +44,24 @@
 
 .animate-marquee:hover {
   animation-play-state: paused;
+}
+
+/* Many components use `outline-none` and rely on their own focus:ring-* for
+   keyboard-focus visibility, but not all do — this is a global fallback so no
+   interactive element is left with zero visible focus indicator (WCAG 2.4.7).
+   :focus-visible only fires for keyboard/programmatic focus, not mouse clicks,
+   so it never affects the mouse-click look those outline-none rules target. */
+:focus-visible {
+  outline: 2px solid var(--color-basil-light);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

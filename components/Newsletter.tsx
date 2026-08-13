@@ -40,7 +40,9 @@ export default function Newsletter() {
           <p className="text-white font-semibold text-sm relative">Thanks! We'll keep you posted. 🎉</p>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto relative">
+            <label htmlFor="newsletterEmail" className="sr-only">Email address</label>
             <input
+              id="newsletterEmail"
               type="email"
               required
               value={email}
