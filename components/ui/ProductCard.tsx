@@ -184,7 +184,7 @@ export default function ProductCard({
           <p className="text-[11px] text-yellow-600 font-semibold mt-0.5">★ {p.rating.toFixed(1)} ({p.reviewCount})</p>
         )}
 
-        <div className="flex items-baseline gap-2 mt-2">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mt-2">
           <span className="text-base font-black text-gray-900">{formatPeso(p.price)}</span>
           {p.originalPrice && <span className="text-xs text-gray-500 font-medium line-through">{formatPeso(p.originalPrice)}</span>}
           <span className="text-[10px] text-gray-500">{formatUnitSuffix(p.unit)}</span>

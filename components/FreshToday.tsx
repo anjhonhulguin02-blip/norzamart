@@ -58,7 +58,7 @@ export default function FreshToday({ products }: { products: FreshProduct[] }) {
       {filtered.length === 0 ? (
         <p className="text-ink/50 text-sm font-body">No fresh {activeTab.toLowerCase()} listed today. Check back soon!</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {filtered.map((p) => (
             <ProductCard key={p.id} product={p} badge="NEW TODAY" badgeColor="basil" />
           ))}

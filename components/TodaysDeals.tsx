@@ -78,7 +78,7 @@ export default function TodaysDeals({ deals }: { deals: Deal[] }) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {deals.map((d, i) => {
           const discountPct = Math.round(((d.originalPrice - d.price) / d.originalPrice) * 100);
           const sold = d.soldCount || 0;
