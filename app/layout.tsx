@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthProvider from "../components/AuthProvider";
 import ToastProvider from "../components/ui/Toast";
 import AuthPromptProvider from "../components/AuthPromptProvider";
+import OfflineBanner from "../components/OfflineBanner";
 import { BASE_URL } from "../lib/siteUrl";
 
 const fraunces = Fraunces({
@@ -91,6 +92,7 @@ export default function RootLayout({
             <AuthPromptProvider>{children}</AuthPromptProvider>
           </ToastProvider>
         </AuthProvider>
+        <OfflineBanner />
       </body>
     </html>
   );
