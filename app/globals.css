@@ -46,6 +46,24 @@
   animation-play-state: paused;
 }
 
+@keyframes loading-wordmark {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.88; transform: scale(1.015); }
+}
+
+.animate-loading-wordmark {
+  animation: loading-wordmark 2.4s ease-in-out infinite;
+}
+
+@keyframes loading-dot {
+  0%, 60%, 100% { transform: translateY(0) scale(0.72); opacity: 0.45; }
+  30% { transform: translateY(-5px) scale(1); opacity: 1; }
+}
+
+.animate-loading-dot {
+  animation: loading-dot 1.3s ease-in-out infinite;
+}
+
 /* Many components use `outline-none` and rely on their own focus:ring-* for
    keyboard-focus visibility, but not all do — this is a global fallback so no
    interactive element is left with zero visible focus indicator (WCAG 2.4.7).
