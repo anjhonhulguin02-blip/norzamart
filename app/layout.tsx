@@ -6,6 +6,7 @@ import ToastProvider from "../components/ui/Toast";
 import AuthPromptProvider from "../components/AuthPromptProvider";
 import OfflineBanner from "../components/OfflineBanner";
 import { BASE_URL } from "../lib/siteUrl";
+import { safeJsonLdStringify } from "../lib/safeJsonLd";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -85,7 +86,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-body bg-cream-mist text-ink">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(organizationJsonLd) }}
         />
         <AuthProvider>
           <ToastProvider>

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { useMotionValue, useTransform, animate } from 'framer-motion';
+import { MapPinIcon, PackageIcon, StoreIcon, UsersIcon } from './ui/NorzaIcons';
 
 interface Stats {
   sellers: number;
@@ -48,36 +49,36 @@ export default function StatsSection() {
   }, []);
 
   const items = [
-    { label: 'Local Sellers', value: stats?.sellers ?? 0, icon: '🏬' },
-    { label: 'Products Listed', value: stats?.products ?? 0, icon: '📦' },
-    { label: 'Barangays Covered', value: stats?.barangays ?? 13, icon: '📍' },
-    { label: 'Community Members', value: stats?.members ?? 0, icon: '🤝' },
+    { label: 'Local sellers', value: stats?.sellers ?? 0, icon: StoreIcon },
+    { label: 'Products listed', value: stats?.products ?? 0, icon: PackageIcon },
+    { label: 'Barangays covered', value: stats?.barangays ?? 13, icon: MapPinIcon },
+    { label: 'Community members', value: stats?.members ?? 0, icon: UsersIcon },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-14">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {items.map((item, i) => (
-          <motion.div
+    <section className="nm-container mt-7" aria-label="NorzaMart community statistics">
+      <div className="grid grid-cols-2 overflow-hidden rounded-[0.85rem] border border-line bg-white shadow-[0_6px_22px_rgba(24,49,39,0.05)] md:grid-cols-4">
+        {items.map((item) => {
+          const ItemIcon = item.icon;
+          return (
+          <div
             key={item.label}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: i * 0.08 }}
-            className="bg-white/60 backdrop-blur-xl border border-white/70 rounded-2xl p-5 text-center shadow-sm"
+            className="flex min-w-0 items-center gap-3 border-b border-r border-line p-3.5 text-left last:border-r-0 sm:p-4 md:border-b-0"
           >
-            <span className="text-2xl">{item.icon}</span>
-            <div className="font-mono text-2xl font-bold text-basil mt-1 h-8 flex items-center justify-center">
-              {loading ? (
-                <span className="inline-block w-10 h-5 rounded bg-basil/10 animate-pulse" aria-hidden="true" />
-              ) : (
-                <Counter value={item.value} suffix="+" />
-              )}
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.65rem] bg-mint-wash text-basil"><ItemIcon size={19} /></span>
+            <div className="min-w-0">
+              <div className="flex h-6 items-center font-mono text-base font-black text-basil sm:text-lg">
+                {loading ? (
+                  <span className="nm-shimmer inline-block h-4 w-9 rounded" aria-hidden="true" />
+                ) : (
+                  <Counter value={item.value} suffix="+" />
+                )}
+              </div>
+              <p className="truncate text-[10px] font-semibold leading-4 text-stone sm:text-xs">{item.label}</p>
             </div>
-            <p className="text-ink/50 text-xs font-body mt-0.5">{item.label}</p>
-          </motion.div>
-        ))}
+          </div>
+        );})}
       </div>
-    </div>
+    </section>
   );
 }

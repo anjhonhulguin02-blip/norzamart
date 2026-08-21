@@ -10,11 +10,14 @@ export default function TestimonialsSection({ reviews }: { reviews: Testimonial[
   if (reviews.length === 0) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-14">
-      <h2 className="text-xl font-black text-gray-900 tracking-tight drop-shadow-sm mb-6 text-center">What Our Customers Say</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+    <section className="nm-container nm-section">
+      <div className="mx-auto max-w-2xl text-center">
+        <p className="nm-kicker">From the community</p>
+        <h2 className="nm-section-title mt-2">What our customers say</h2>
+      </div>
+      <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {reviews.map((r, i) => (
-          <div key={i} className="bg-white/50 backdrop-blur-xl border border-white/70 rounded-2xl p-5 shadow-sm">
+          <article key={i} className="nm-surface p-5">
             <div className="flex items-center gap-3 mb-2">
               <span className="w-9 h-9 rounded-full bg-basil/10 flex items-center justify-center text-sm font-bold text-basil">
                 {r.userName.charAt(0).toUpperCase()}
@@ -24,12 +27,15 @@ export default function TestimonialsSection({ reviews }: { reviews: Testimonial[
                 <p className="text-ink/40 text-[11px]">{r.productName}</p>
               </div>
             </div>
-            <span className="text-yellow-500 text-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-            <p className="text-ink/70 text-sm font-body mt-2 line-clamp-3">{r.comment}</p>
-            <p className="text-ink/30 text-[10px] mt-2">{new Date(r.createdAt).toLocaleDateString()}</p>
-          </div>
+            <div className="flex gap-0.5 text-[#9b6610]" aria-label={`${r.rating} out of 5 stars`}>
+              {Array.from({ length: 5 }, (_, star) => <StarIcon key={star} size={14} filled={star < r.rating} />)}
+            </div>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink/75">{r.comment}</p>
+            <p className="mt-3 text-[11px] text-stone">{new Date(r.createdAt).toLocaleDateString()}</p>
+          </article>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
+import { StarIcon } from './ui/NorzaIcons';

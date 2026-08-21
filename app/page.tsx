@@ -3,7 +3,6 @@ import Navbar from '../components/Navbar';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import HeroBanner from '../components/HeroBanner';
 import ProductGrid from '../components/ProductGrid';
-import StatsSection from '../components/StatsSection';
 import TodaysDeals from '../components/TodaysDeals';
 import FeaturedSellers from '../components/FeaturedSellers';
 import FreshToday from '../components/FreshToday';
@@ -26,6 +25,7 @@ import Order from '@/lib/models/order';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import User from '@/lib/models/user';
+import { MapPinIcon } from '@/components/ui/NorzaIcons';
 
 export default async function Home({
   searchParams,
@@ -48,6 +48,24 @@ export default async function Home({
   allProducts.forEach((p: any) => {
     categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
   });
+
+  const heroProductsRaw = await Product.find({
+    status: 'active',
+    approvalStatus: 'approved',
+    image: { $exists: true, $ne: '' },
+  })
+    .select('name image category')
+    .sort({ createdAt: -1 })
+    .limit(24)
+    .lean() as any[];
+
+  const heroProducts = heroProductsRaw
+    .map((p: any) => ({
+      id: p._id.toString(),
+      name: p.name,
+      image: p.image,
+      category: p.category,
+    }));
 
   const categoryDocs = await Category.find().lean() as any[];
   const categoryIcons: Record<string, string> = {};
@@ -95,6 +113,7 @@ export default async function Home({
     originalPrice: p.originalPrice,
     image: p.image || '🛒',
     tag: p.tag,
+    category: p.category,
     brgy: p.seller?.barangay || '',
     unit: p.unit || 'piece',
     rating: ratingMap[p._id.toString()]?.avg ?? null,
@@ -286,29 +305,29 @@ export default async function Home({
   }));
 
   return (
-    <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 flex flex-col justify-between antialiased">
+    <main className="nm-home flex min-h-screen w-full flex-col justify-between antialiased">
       <div>
+        <AnnouncementBanner variant="utility" />
         <Navbar />
-        <AnnouncementBanner />
-        <HeroBanner />
+        <HeroBanner products={heroProducts} />
         {buyerBarangay && (
-          <div className="max-w-7xl mx-auto px-4 mt-6">
-            <div className="bg-basil/10 border border-basil/20 rounded-xl px-4 py-2.5 text-xs font-semibold text-basil flex items-center gap-2">
-              📍 Showing products available in <strong>{buyerBarangay}</strong>
+          <div className="nm-container mt-6">
+            <div className="flex min-h-11 items-center gap-2 rounded-control border border-basil/20 bg-mint-wash px-4 py-2.5 text-xs font-semibold text-basil sm:text-sm">
+              <MapPinIcon size={17} />
+              Showing products available in <strong>{buyerBarangay}</strong>
             </div>
           </div>
         )}
         {buyerBarangay && <NearbySellers barangay={buyerBarangay} sellers={nearbySellers} />}
         {buyerBarangay && <ProductsNearYou barangay={buyerBarangay} products={nearbyProducts} />}
-        <StatsSection />
+        <ProductGrid categories={dbCategories} products={dbProducts} activeCategory={category} />
         <TodaysDeals deals={deals} />
         {buyerBarangay && <TrendingInBarangay barangay={buyerBarangay} products={trendingProducts} />}
-        <ProductGrid categories={dbCategories} products={dbProducts} activeCategory={category} />
         <FreshToday products={freshProducts} />
+        <WhyChooseUs />
         <CommunityRecommendations products={communityRecommendations} />
         <FeaturedSellers sellers={featuredSellers} />
         <SellerOfTheWeek seller={sellerOfWeek} />
-        <WhyChooseUs />
         <TestimonialsSection reviews={testimonials} />
         <Newsletter />
       </div>

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Product from "@/lib/models/product";
-import { getSellerFromSession } from "@/lib/getSellerFromSession";
+import { requireApprovedSeller } from "@/lib/getSellerFromSession";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const seller = await getSellerFromSession();
+    const seller = await requireApprovedSeller();
     if (!seller) {
       return NextResponse.json({ message: "Not authorized." }, { status: 401 });
     }

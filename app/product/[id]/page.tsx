@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from 'next';
 import { BASE_URL } from '@/lib/siteUrl';
+import { safeJsonLdStringify } from '@/lib/safeJsonLd';
 
 void Seller;
 
@@ -18,10 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   await connectToDatabase();
   const product = await Product.findById(id)
     .select('name description image price unit category approvalStatus')
-    .populate('seller', 'storeName')
+    .populate('seller', 'storeName status')
     .lean() as any;
 
-  if (!product || product.approvalStatus !== 'approved') {
+  if (!product || product.approvalStatus !== 'approved' || product.seller?.status !== 'approved') {
     return { title: 'Product Not Found' };
   }
 
@@ -60,16 +61,16 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
 
   await connectToDatabase();
-  const product = await Product.findById(id).populate('seller', 'storeName barangay deliveryBarangays estimatedDeliveryTime').lean() as any;
+  const product = await Product.findById(id).populate('seller', 'storeName barangay deliveryBarangays estimatedDeliveryTime status').lean() as any;
 
-  if (!product || product.status !== 'active' || product.approvalStatus !== 'approved') {
+  if (!product || product.status !== 'active' || product.approvalStatus !== 'approved' || product.seller?.status !== 'approved') {
     notFound();
   }
 
   const session = await getServerSession(authOptions);
   let buyerBarangay = '';
   if (session?.user) {
-    const buyerDoc = await User.findById((session.user as any).id).select('settings');
+    const buyerDoc = await User.findById(session.user.id).select('settings');
     buyerBarangay = buyerDoc?.settings?.barangay || '';
   }
 
@@ -108,8 +109,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbJsonLd) }} />
       <Navbar />
       <ProductDetailClient
         productId={product._id.toString()}

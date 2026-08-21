@@ -1,6 +1,7 @@
 import Navbar from '@/components/Navbar';
 import SiteFooter from '@/components/SiteFooter';
 import FaqAccordion from '@/components/FaqAccordion';
+import { safeJsonLdStringify } from '@/lib/safeJsonLd';
 
 export const metadata = { title: 'FAQ — NorzaMart', alternates: { canonical: '/faq' } };
 
@@ -52,7 +53,7 @@ const faqJsonLd = {
 export default function FaqPage() {
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 flex flex-col justify-between">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(faqJsonLd) }} />
       <div>
         <Navbar />
         <div className="max-w-3xl mx-auto px-4 py-14">

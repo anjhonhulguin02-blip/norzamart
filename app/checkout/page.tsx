@@ -58,6 +58,12 @@ export default function CheckoutPage() {
   const [paymentReference, setPaymentReference] = useState('');
   const [paymentProofImage, setPaymentProofImage] = useState<string | null>(null);
 
+  // Generated once per checkout page visit and reused across retries of the
+  // same submission (e.g. a network hiccup after the server already placed
+  // the order), so the server can recognize a retry and avoid double-placing
+  // it instead of treating each click as a brand-new order.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
+
   useEffect(() => {
     fetch('/api/barangays').then((res) => res.json()).then((data) => setBarangays(data.barangays || []));
   }, []);
@@ -197,6 +203,7 @@ export default function CheckoutPage() {
           buyNow: buyNow || undefined,
           paymentReference: form.paymentMethod !== 'cod' ? paymentReference.trim() : undefined,
           paymentProofImage: uploadedProof,
+          idempotencyKey,
         }),
       });
       const data = await res.json();

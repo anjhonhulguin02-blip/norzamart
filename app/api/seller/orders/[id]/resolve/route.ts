@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb";
 import Order from "@/lib/models/order";
-import Product from "@/lib/models/product";
-import Seller from "@/lib/models/seller";
+import { requireApprovedSeller } from "@/lib/getSellerFromSession";
 import { createNotification } from "@/lib/createNotification";
+import { restoreOrderStockOnce } from "@/lib/restoreOrderStock";
+import { RESOLVABLE_STATUSES, MAX_NOTE_LENGTH } from "@/lib/orderStateMachine";
 
 const RESOLUTION_LABELS: Record<string, { approved: string; rejected: string }> = {
   cancellation_requested: {
@@ -18,66 +18,94 @@ const RESOLUTION_LABELS: Record<string, { approved: string; rejected: string }> 
   },
 };
 
+class StaleOrderStatusError extends Error {}
+
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ message: "Please log in first." }, { status: 401 });
+    const seller = await requireApprovedSeller();
+    if (!seller) {
+      return NextResponse.json({ message: "Not authorized." }, { status: 403 });
     }
 
     const { action, note } = await req.json();
     if (!["approve", "reject"].includes(action)) {
       return NextResponse.json({ message: "Invalid action." }, { status: 400 });
     }
-
-    await connectToDatabase();
-    const seller = await Seller.findOne({ user: (session.user as any).id });
-    if (!seller) {
-      return NextResponse.json({ message: "Not authorized." }, { status: 403 });
+    const trimmedNote = (note || "").trim();
+    if (trimmedNote.length > MAX_NOTE_LENGTH) {
+      return NextResponse.json(
+        { message: `Please keep your note under ${MAX_NOTE_LENGTH} characters.` },
+        { status: 400 }
+      );
     }
 
-    const order = await Order.findOne({ _id: id, seller: seller._id });
-    if (!order) {
+    await connectToDatabase();
+
+    const current = await Order.findOne({ _id: id, seller: seller._id });
+    if (!current) {
       return NextResponse.json({ message: "Order not found." }, { status: 404 });
     }
 
-    if (!["cancellation_requested", "refund_requested"].includes(order.status)) {
+    if (!RESOLVABLE_STATUSES.includes(current.status)) {
       return NextResponse.json({ message: "This order has no pending request to resolve." }, { status: 400 });
     }
 
-    const requestType = order.status as "cancellation_requested" | "refund_requested";
+    const requestType = current.status as "cancellation_requested" | "refund_requested";
     const labels = RESOLUTION_LABELS[requestType];
 
-    if (action === "approve") {
-      const finalStatus = requestType === "cancellation_requested" ? "cancelled" : "refunded";
-      order.status = finalStatus;
-      order.statusHistory.push({ status: finalStatus, at: new Date() });
+    const finalStatus =
+      action === "approve"
+        ? requestType === "cancellation_requested"
+          ? "cancelled"
+          : "refunded"
+        : current.previousStatus || "delivered";
 
-      if (finalStatus === "cancelled") {
-        for (const item of order.items) {
-          await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
+    const mongoSession = await mongoose.startSession();
+    let updated: typeof current | null = null;
+    try {
+      await mongoSession.withTransaction(async () => {
+        updated = await Order.findOneAndUpdate(
+          { _id: id, seller: seller._id, status: current.status },
+          {
+            $set: { status: finalStatus, resolutionNote: trimmedNote || undefined, previousStatus: undefined },
+            $push: { statusHistory: { status: finalStatus, at: new Date() } },
+          },
+          { new: true, session: mongoSession }
+        );
+        if (!updated) {
+          throw new StaleOrderStatusError();
         }
+        if (action === "approve" && requestType === "cancellation_requested") {
+          await restoreOrderStockOnce(updated._id, updated.items, mongoSession);
+        }
+      });
+    } catch (err) {
+      if (err instanceof StaleOrderStatusError) {
+        return NextResponse.json(
+          { message: "This order was already updated — please refresh." },
+          { status: 409 }
+        );
       }
-    } else {
-      const revertStatus = order.previousStatus || "delivered";
-      order.status = revertStatus;
-      order.statusHistory.push({ status: revertStatus, at: new Date() });
+      throw err;
+    } finally {
+      await mongoSession.endSession();
     }
 
-    order.resolutionNote = (note || "").trim() || undefined;
-    order.previousStatus = undefined;
-    await order.save();
+    if (!updated) {
+      throw new Error("unreachable: transaction committed without setting `updated`");
+    }
+    const finalOrder: typeof current = updated;
 
     await createNotification({
-      userId: order.buyer.toString(),
+      userId: finalOrder.buyer.toString(),
       type: "order_status",
       title: action === "approve" ? labels.approved : labels.rejected,
-      body: order.resolutionNote || `Order #${order._id.toString().slice(-6).toUpperCase()}`,
-      link: `/dashboard/orders/${order._id}`,
+      body: trimmedNote || `Order #${finalOrder._id.toString().slice(-6).toUpperCase()}`,
+      link: `/dashboard/orders/${finalOrder._id}`,
     });
 
-    return NextResponse.json({ message: "Resolved!", order });
+    return NextResponse.json({ message: "Resolved!", order: finalOrder });
   } catch (error) {
     console.error("ORDER RESOLVE ERROR:", error);
     return NextResponse.json({ message: "Something went wrong." }, { status: 500 });

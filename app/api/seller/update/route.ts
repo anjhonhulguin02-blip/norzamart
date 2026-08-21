@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Seller from "@/lib/models/seller";
 import { invalidImageMessage } from "@/lib/validateImageUrl";
+import { requireApprovedSeller } from "@/lib/getSellerFromSession";
 
 export async function PUT(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ message: "Please log in first." }, { status: 401 });
+    // Approved-only: this route includes payout fields (gcash/bank details),
+    // which a pending or rejected seller must not be able to change.
+    const existingSeller = await requireApprovedSeller();
+    if (!existingSeller) {
+      return NextResponse.json({ message: "Not authorized." }, { status: 401 });
     }
 
     const body = await req.json();
@@ -26,7 +27,7 @@ export async function PUT(req: Request) {
 
     await connectToDatabase();
     const seller = await Seller.findOneAndUpdate(
-      { user: (session.user as any).id },
+      { _id: existingSeller._id },
       {
         storeName, storeLogo, storeBanner, ownerName, contactNumber, email, address, barangay,
         storeDescription, deliveryBarangays, businessHours, facebook, instagram, website, estimatedDeliveryTime,

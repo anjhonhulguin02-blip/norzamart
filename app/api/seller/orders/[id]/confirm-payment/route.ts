@@ -1,24 +1,18 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import Order from "@/lib/models/order";
-import Seller from "@/lib/models/seller";
+import { requireApprovedSeller } from "@/lib/getSellerFromSession";
 import { createNotification } from "@/lib/createNotification";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ message: "Please log in first." }, { status: 401 });
-    }
-
-    await connectToDatabase();
-    const seller = await Seller.findOne({ user: (session.user as any).id });
+    const seller = await requireApprovedSeller();
     if (!seller) {
       return NextResponse.json({ message: "Not authorized." }, { status: 403 });
     }
+
+    await connectToDatabase();
 
     const order = await Order.findOne({ _id: id, seller: seller._id });
     if (!order) {
@@ -32,18 +26,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ message: "Payment already confirmed." }, { status: 400 });
     }
 
-    order.paymentConfirmedAt = new Date();
-    await order.save();
+    const updated = await Order.findOneAndUpdate(
+      { _id: id, seller: seller._id, paymentConfirmedAt: { $exists: false } },
+      { $set: { paymentConfirmedAt: new Date() } },
+      { new: true }
+    );
+    if (!updated) {
+      return NextResponse.json({ message: "Payment already confirmed." }, { status: 400 });
+    }
 
     await createNotification({
-      userId: order.buyer.toString(),
+      userId: updated.buyer.toString(),
       type: "order_status",
       title: "Payment confirmed",
-      body: `The seller confirmed your payment for order #${order._id.toString().slice(-6).toUpperCase()}`,
-      link: `/dashboard/orders/${order._id}`,
+      body: `The seller confirmed your payment for order #${updated._id.toString().slice(-6).toUpperCase()}`,
+      link: `/dashboard/orders/${updated._id}`,
     });
 
-    return NextResponse.json({ message: "Payment confirmed!", order });
+    return NextResponse.json({ message: "Payment confirmed!", order: updated });
   } catch (error) {
     console.error("CONFIRM PAYMENT ERROR:", error);
     return NextResponse.json({ message: "Something went wrong." }, { status: 500 });

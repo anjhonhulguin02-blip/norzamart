@@ -69,7 +69,11 @@ export default function SellerRegisterPage() {
         return;
       }
 
-      await update({ role: 'seller' });
+      // Triggers the jwt callback to re-read this user's role from the
+      // database (it's already "seller" there — the API route above set it)
+      // rather than trusting a role value from this client, which is how a
+      // buyer could previously self-promote to admin via update({ role }).
+      await update();
       router.push('/seller/dashboard');
     } catch (err: any) {
       setError(err?.message || 'Unable to connect to the server.');

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Product from "@/lib/models/product";
-import { getSellerFromSession } from "@/lib/getSellerFromSession";
+import { getSellerFromSession, requireApprovedSeller } from "@/lib/getSellerFromSession";
 import { invalidImageMessage, invalidImageArrayMessage } from "@/lib/validateImageUrl";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +24,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const seller = await getSellerFromSession();
+    const seller = await requireApprovedSeller();
     if (!seller) {
       return NextResponse.json({ message: "Not authorized." }, { status: 401 });
     }
@@ -65,7 +65,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const seller = await getSellerFromSession();
+    const seller = await requireApprovedSeller();
     if (!seller) {
       return NextResponse.json({ message: "Not authorized." }, { status: 401 });
     }

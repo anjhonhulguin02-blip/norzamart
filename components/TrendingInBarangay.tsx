@@ -1,17 +1,19 @@
 import ProductCard, { ProductCardData } from './ui/ProductCard';
+import { TrendIcon } from './ui/NorzaIcons';
 
 export default function TrendingInBarangay({ barangay, products }: { barangay: string; products: ProductCardData[] }) {
   if (products.length === 0) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-14">
-      <h2 className="text-xl font-black text-gray-900 tracking-tight drop-shadow-sm mb-1">📈 Trending in {barangay}</h2>
-      <p className="text-ink/50 text-xs font-body mb-4">What your neighbors have been ordering lately.</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+    <section className="nm-container nm-section">
+      <p className="nm-kicker flex items-center gap-2"><TrendIcon size={16} /> Popular nearby</p>
+      <h2 className="nm-section-title mt-2">Trending in {barangay}</h2>
+      <p className="nm-section-copy mt-2 mb-5">What your neighbors have been ordering lately.</p>
+      <div className="nm-product-grid">
         {products.map((p) => (
           <ProductCard key={p.id} product={p} badge="TRENDING" badgeColor="tomato" />
         ))}
       </div>
-    </div>
+    </section>
   );
 }

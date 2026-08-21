@@ -50,21 +50,32 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   pages: { signIn: "/" },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    // SECURITY: role/status must never be taken from the client. Previously
+    // `trigger === "update" && session?.role` copied whatever role the
+    // client passed to useSession().update({...}) straight into the token —
+    // any signed-in buyer could call update({ role: "admin" }) from the
+    // browser console and requireAdmin() would trust it. The database is now
+    // the only source of truth: every refresh re-reads the user's current
+    // role/status by their trusted token id (never from `session`), so a
+    // demoted or banned user's existing JWT stops carrying elevated access
+    // on the very next request instead of waiting up to 30 days to expire.
+    async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
-        token.role = (user as any).role;
+        token.id = user.id;
       }
-      // Para ma-refresh yung role sa token pagkatapos maging seller, kahit walang re-login
-      if (trigger === "update" && session?.role) {
-        token.role = session.role;
+      if (token.id) {
+        await connectToDatabase();
+        const dbUser = await User.findById(token.id).select("role status").lean<{ role?: string; status?: string } | null>();
+        token.role = dbUser?.role || "buyer";
+        token.status = dbUser?.status || (dbUser ? "active" : "banned");
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.status = token.status;
       }
       return session;
     },

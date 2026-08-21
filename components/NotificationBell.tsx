@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import { getPusherClient } from '@/lib/pusherClient';
 import { useToast } from './ui/Toast';
 import { useAnchoredMenuPosition } from '@/lib/useAnchoredMenuPosition';
+import { BasketIcon, BellIcon, ChatIcon, PackageIcon, StarIcon, TagIcon, WalletIcon } from './ui/NorzaIcons';
 
 interface Notif {
   _id: string;
@@ -29,13 +30,13 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-const TYPE_ICON: Record<string, string> = {
-  order_status: '📦',
-  new_message: '💬',
-  new_review: '⭐',
-  seller_new_order: '🛍',
-  payout_update: '💰',
-  product_status: '🏷️',
+const TYPE_ICON: Record<string, typeof BellIcon> = {
+  order_status: PackageIcon,
+  new_message: ChatIcon,
+  new_review: StarIcon,
+  seller_new_order: BasketIcon,
+  payout_update: WalletIcon,
+  product_status: TagIcon,
 };
 
 export default function NotificationBell() {
@@ -112,7 +113,8 @@ export default function NotificationBell() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
             style={{ top: pos.top, left: pos.left, width: pos.width }}
-            className="fixed max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border border-white/70 rounded-2xl shadow-2xl z-50"
+            role="menu"
+            className="fixed z-50 max-h-96 overflow-y-auto rounded-card border border-line bg-paper shadow-float"
           >
             <div className="px-4 py-3 border-b border-ink/10">
               <p className="font-display font-semibold text-basil text-sm">Notifications</p>
@@ -120,7 +122,9 @@ export default function NotificationBell() {
             {notifs.length === 0 ? (
               <p className="text-ink/50 text-xs font-body p-6 text-center">No notifications yet.</p>
             ) : (
-              notifs.map((n) => (
+              notifs.map((n) => {
+                const TypeIcon = TYPE_ICON[n.type] || BellIcon;
+                return (
                 <Link
                   key={n._id}
                   href={n.link || '#'}
@@ -129,14 +133,15 @@ export default function NotificationBell() {
                     !n.read ? 'bg-basil/5' : ''
                   }`}
                 >
-                  <span className="text-lg shrink-0">{TYPE_ICON[n.type] || '🔔'}</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-mint-wash text-basil"><TypeIcon size={17} /></span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-ink">{n.title}</p>
                     {n.body && <p className="text-ink/50 text-[11px] mt-0.5 truncate">{n.body}</p>}
                     <p className="text-ink/30 text-[10px] mt-0.5">{timeAgo(n.createdAt)}</p>
                   </div>
                 </Link>
-              ))
+                );
+              })
             )}
           </motion.div>
         </>
@@ -151,9 +156,11 @@ export default function NotificationBell() {
         ref={buttonRef}
         onClick={handleOpen}
         aria-label="Notifications"
-        className="relative cursor-pointer bg-white/70 hover:bg-white text-basil w-10 h-10 rounded-full flex items-center justify-center border border-white/70 shadow-sm transition-all"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="nm-icon-button relative"
       >
-        🔔
+        <BellIcon size={20} />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-tomato text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}

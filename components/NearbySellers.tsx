@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import FollowButton from './FollowButton';
+import { CheckBadgeIcon, MapPinIcon, StoreIcon } from './ui/NorzaIcons';
 
 interface NearbySeller {
   id: string;
@@ -14,36 +15,34 @@ export default function NearbySellers({ barangay, sellers }: { barangay: string;
   if (sellers.length === 0) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-14">
-      <h2 className="text-xl font-black text-gray-900 tracking-tight drop-shadow-sm mb-1">🏘️ Nearby Sellers</h2>
-      <p className="text-ink/50 text-xs font-body mb-4">Stores based right here in {barangay}.</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+    <section className="nm-container nm-section">
+      <p className="nm-kicker flex items-center gap-2"><MapPinIcon size={16} /> Close to home</p>
+      <h2 className="nm-section-title mt-2">Nearby sellers</h2>
+      <p className="nm-section-copy mt-2">Stores based right here in {barangay}.</p>
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {sellers.map((s) => (
-          <Link
-            key={s.id}
-            href={`/seller/${s.id}`}
-            className="bg-white/50 backdrop-blur-xl border border-white/70 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-center"
-          >
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-basil/10 flex items-center justify-center overflow-hidden mb-3">
+          <article key={s.id} className="nm-surface group relative p-5 text-center transition-[border-color,box-shadow] hover:border-basil/30 hover:shadow-float">
+            <Link href={`/seller/${s.id}`} aria-label={`View ${s.storeName}`} className="absolute inset-0 z-0 rounded-card" />
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-[1rem] bg-mint-wash text-basil">
               {s.storeLogo ? (
                 <img src={s.storeLogo} alt={s.storeName} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-2xl">🏬</span>
+                <StoreIcon size={26} />
               )}
             </div>
             <div className="flex items-center justify-center gap-1">
               <p className="font-bold text-sm text-ink truncate">{s.storeName}</p>
               {s.status === 'approved' && (
-                <span title="Verified Seller" className="text-basil text-xs">✔️</span>
+                <span title="Verified seller" className="text-basil"><CheckBadgeIcon size={16} /><span className="sr-only">Verified seller</span></span>
               )}
             </div>
-            <p className="text-ink/50 text-xs font-body mt-0.5">{s.productCount} products</p>
-            <div className="mt-3 flex justify-center">
+            <p className="mt-1 text-xs text-stone">{s.productCount} products</p>
+            <div className="relative z-10 mt-3 flex justify-center">
               <FollowButton sellerId={s.id} initialFollowerCount={s.followerCount} size="sm" />
             </div>
-          </Link>
+          </article>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

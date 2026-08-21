@@ -11,6 +11,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { formatPeso, formatUnitSuffix } from '@/lib/formatProduct';
 import { BASE_URL } from '@/lib/siteUrl';
+import { safeJsonLdStringify } from '@/lib/safeJsonLd';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -57,7 +58,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
   await connectToDatabase();
 
   const seller = await Seller.findById(id).select('-governmentId').lean() as any;
-  if (!seller) {
+  if (!seller || seller.status !== 'approved') {
     notFound();
   }
 
@@ -122,7 +123,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
 
   return (
     <main className="w-full min-h-screen bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbJsonLd) }} />
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-10">
 

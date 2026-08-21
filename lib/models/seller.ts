@@ -25,6 +25,9 @@ const SellerSchema = new Schema(
     bankName: { type: String },
     bankAccountNumber: { type: String },
     bankAccountName: { type: String },
+    // Transient distributed lock guarding payout-balance checks — see
+    // lib/withSellerPayoutLock.ts. Absent/unset means unlocked.
+    payoutLockedAt: { type: Date },
   },
   { timestamps: true }
 );

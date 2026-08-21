@@ -46,12 +46,17 @@ const OrderSchema = new Schema(
       default: () => [{ status: "pending", at: new Date() }],
     },
     previousStatus: { type: String },
-    cancelReason: { type: String },
-    refundReason: { type: String },
-    resolutionNote: { type: String },
+    cancelReason: { type: String, maxlength: 500 },
+    refundReason: { type: String, maxlength: 500 },
+    resolutionNote: { type: String, maxlength: 500 },
     paymentReference: { type: String },
     paymentProofImage: { type: String },
     paymentConfirmedAt: { type: Date },
+    // Set exactly once, atomically, the first time this order's stock is
+    // restored (cancellation or resolved cancellation request) — guards
+    // against a concurrent or retried request restoring it a second time.
+    // See lib/restoreOrderStock.ts.
+    stockRestored: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

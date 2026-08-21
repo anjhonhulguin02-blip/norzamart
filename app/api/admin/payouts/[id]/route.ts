@@ -18,18 +18,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   await connectToDatabase();
-  const payout = await Payout.findById(id);
-  if (!payout) {
-    return NextResponse.json({ message: "Payout request not found." }, { status: 404 });
-  }
-  if (payout.status !== "pending") {
-    return NextResponse.json({ message: "This request has already been processed." }, { status: 400 });
-  }
 
-  payout.status = status;
-  payout.adminNote = adminNote || undefined;
-  payout.processedAt = new Date();
-  await payout.save();
+  // Atomic compare-and-swap on status: only one of two concurrent
+  // approve/reject requests for the same payout can ever match
+  // `status: "pending"` and win the update — the other correctly sees
+  // it as already processed instead of silently overwriting it.
+  const payout = await Payout.findOneAndUpdate(
+    { _id: id, status: "pending" },
+    { $set: { status, adminNote: adminNote || undefined, processedAt: new Date() } },
+    { new: true }
+  );
+  if (!payout) {
+    const exists = await Payout.exists({ _id: id });
+    return NextResponse.json(
+      { message: exists ? "This request has already been processed." : "Payout request not found." },
+      { status: exists ? 400 : 404 }
+    );
+  }
 
   const seller = await Seller.findById(payout.seller);
   if (seller) {

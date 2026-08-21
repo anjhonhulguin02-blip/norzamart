@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import ProductCard from './ui/ProductCard';
+import { LeafIcon } from './ui/NorzaIcons';
 
 interface FreshProduct {
   id: string;
@@ -12,12 +13,12 @@ interface FreshProduct {
   category: string;
 }
 
-const TABS: { label: string; icon: string; categories: string[] }[] = [
-  { label: 'All', icon: '🌱', categories: [] },
-  { label: 'Meat', icon: '🍗', categories: ['Meat & Poultry'] },
-  { label: 'Vegetables', icon: '🥬', categories: ['Vegetables'] },
-  { label: 'Seafood', icon: '🐟', categories: ['Seafood'] },
-  { label: 'Fruits', icon: '🍎', categories: ['Fruits'] },
+const TABS: { label: string; categories: string[] }[] = [
+  { label: 'All', categories: [] },
+  { label: 'Meat', categories: ['Meat & Poultry'] },
+  { label: 'Vegetables', categories: ['Vegetables'] },
+  { label: 'Seafood', categories: ['Seafood'] },
+  { label: 'Fruits', categories: ['Fruits'] },
 ];
 
 export default function FreshToday({ products }: { products: FreshProduct[] }) {
@@ -31,9 +32,12 @@ export default function FreshToday({ products }: { products: FreshProduct[] }) {
     : products.filter((p) => activeCategories.includes(p.category));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mt-14">
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-        <h2 className="text-xl font-black text-gray-900 tracking-tight drop-shadow-sm">🌱 Fresh Today</h2>
+    <section className="nm-container nm-section">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="nm-kicker flex items-center gap-2"><LeafIcon size={16} /> Just listed</p>
+          <h2 className="nm-section-title mt-2">Fresh today</h2>
+        </div>
         <div className="flex flex-wrap gap-2">
           {TABS.map((tab) => {
             const count = tab.categories.length === 0
@@ -44,11 +48,12 @@ export default function FreshToday({ products }: { products: FreshProduct[] }) {
               <button
                 key={tab.label}
                 onClick={() => setActiveTab(tab.label)}
-                className={`text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
-                  activeTab === tab.label ? 'bg-basil text-white' : 'bg-white/60 text-ink/60 hover:bg-basil/5'
+                aria-pressed={activeTab === tab.label}
+                className={`min-h-11 rounded-full border px-3.5 text-xs font-bold transition-colors ${
+                  activeTab === tab.label ? 'border-basil bg-basil text-white' : 'border-line bg-paper text-stone hover:border-basil/30 hover:bg-mint-wash hover:text-basil'
                 }`}
               >
-                {tab.icon} {tab.label} ({count})
+                {tab.label} ({count})
               </button>
             );
           })}
@@ -58,12 +63,12 @@ export default function FreshToday({ products }: { products: FreshProduct[] }) {
       {filtered.length === 0 ? (
         <p className="text-ink/50 text-sm font-body">No fresh {activeTab.toLowerCase()} listed today. Check back soon!</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <div className="nm-product-grid">
           {filtered.map((p) => (
             <ProductCard key={p.id} product={p} badge="NEW TODAY" badgeColor="basil" />
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

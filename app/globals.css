@@ -1,22 +1,298 @@
 @import "tailwindcss";
 
 @theme {
-  --color-basil: #0F5132;
-  --color-basil-light: #1B7A4D;
-  --color-mint-glow: #6EE7B7;
-  --color-tomato: #E23744;
-  --color-cream-mist: #F3FBF6;
-  --color-ink: #132A1D;
+  /* NorzaMart — Neighborhood market, refined. Keep raw values here so components
+     consume semantic Tailwind tokens instead of scattering hex values. */
+  --color-basil: #174f38;
+  --color-basil-light: #2e7656;
+  --color-forest-deep: #0d3021;
+  --color-mint-glow: #8fd3af;
+  --color-tomato: #c84a36;
+  --color-danger: #b9382d;
+  --color-cream-mist: #f7f3ea;
+  --color-paper: #fffcf6;
+  --color-ink: #183127;
+  --color-stone: #5f6d64;
+  --color-line: #d8e0d8;
+  --color-sun: #eabf58;
+  --color-mint-wash: #e4f2e8;
+  --color-tomato-wash: #f9e7e1;
 
   --font-display: var(--font-fraunces);
   --font-body: var(--font-inter);
   --font-utility: var(--font-geist-mono);
+
+  --radius-control: 0.75rem;
+  --radius-card: 1.125rem;
+  --radius-feature: 1.625rem;
+
+  --shadow-card: 0 1px 2px rgba(24, 49, 39, 0.05), 0 10px 30px rgba(24, 49, 39, 0.06);
+  --shadow-float: 0 18px 50px rgba(24, 49, 39, 0.12);
 
   /* Prices use font-mono site-wide. Some Android WebViews (e.g. Facebook's
      in-app browser) have monospace fonts with no ₱ glyph, rendering it as a
      tofu box — appending system-ui/sans-serif lets that one glyph fall back
      to a font that has it, while digits/letters still render as monospace. */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace, system-ui, sans-serif;
+}
+
+html {
+  scroll-padding-top: 7rem;
+  background: var(--color-cream-mist);
+}
+
+body {
+  min-width: 320px;
+  background-color: var(--color-cream-mist);
+  background-image:
+    linear-gradient(rgba(23, 79, 56, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 79, 56, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  line-height: 1.6;
+}
+
+::selection {
+  background: var(--color-mint-glow);
+  color: var(--color-forest-deep);
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+.nm-container {
+  width: min(100% - 2rem, 80rem);
+  margin-inline: auto;
+}
+
+.nm-section {
+  margin-top: clamp(3.5rem, 6vw, 6rem);
+}
+
+.nm-surface {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.nm-kicker {
+  color: var(--color-basil-light);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.nm-section-title {
+  color: var(--color-ink);
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.nm-section-copy {
+  max-width: 42rem;
+  color: var(--color-stone);
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+/* Homepage merchandising override: the storefront is intentionally denser and
+   uses retail-style sans headings while the rest of the product keeps the
+   warmer editorial defaults from the master design system. */
+.nm-home {
+  background: #ffffff;
+}
+
+.nm-home .nm-section {
+  margin-top: clamp(3rem, 5vw, 4rem);
+}
+
+.nm-home .nm-section-title {
+  font-family: var(--font-inter), Arial, sans-serif;
+  font-size: clamp(1.6rem, 2.6vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.nm-home .nm-surface {
+  background: #ffffff;
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 2px rgba(24, 49, 39, 0.04), 0 8px 24px rgba(24, 49, 39, 0.055);
+}
+
+.nm-stage-block {
+  position: relative;
+  border-radius: 0.28rem 0.28rem 0.16rem 0.16rem;
+  background: linear-gradient(145deg, #dc624d 0%, var(--color-tomato) 62%, #b83e2f 100%);
+  box-shadow:
+    0 12px 0 #9b3529,
+    0 22px 30px rgba(101, 35, 27, 0.16);
+}
+
+.nm-stage-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.22), transparent 38%);
+  pointer-events: none;
+}
+
+.nm-stage-product {
+  transform-origin: 50% 100%;
+}
+
+.nm-stage-cutout {
+  mix-blend-mode: multiply;
+}
+
+@keyframes nm-market-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.nm-shimmer {
+  background: linear-gradient(90deg, rgba(23, 79, 56, 0.06) 25%, rgba(143, 211, 175, 0.24) 50%, rgba(23, 79, 56, 0.06) 75%);
+  background-size: 220% 100%;
+  animation: nm-market-shimmer 1.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.nm-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.nm-button-primary,
+.nm-button-secondary {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  border-radius: var(--radius-control);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.25;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.nm-button-primary {
+  background: var(--color-basil);
+  color: white;
+  box-shadow: 0 8px 20px rgba(23, 79, 56, 0.18);
+}
+
+.nm-button-primary:hover {
+  background: var(--color-basil-light);
+}
+
+.nm-button-secondary {
+  background: var(--color-paper);
+  border: 1px solid rgba(23, 79, 56, 0.35);
+  color: var(--color-basil);
+}
+
+.nm-button-secondary:hover {
+  border-color: var(--color-basil);
+  background: var(--color-mint-wash);
+}
+
+.nm-button-primary:active,
+.nm-button-secondary:active {
+  transform: scale(0.98);
+}
+
+.nm-icon-button {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-paper);
+  color: var(--color-basil);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.nm-icon-button:hover {
+  border-color: rgba(23, 79, 56, 0.35);
+  background: var(--color-mint-wash);
+}
+
+.nm-market-weave {
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.045) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.045) 75%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%);
+  background-position: 0 0, 12px 12px;
+  background-size: 24px 24px;
+}
+
+@media (min-width: 640px) {
+  .nm-product-grid {
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .nm-container {
+    width: min(100% - 3rem, 80rem);
+  }
+
+  .nm-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .nm-container {
+    width: min(100% - 4rem, 80rem);
+  }
+
+  .nm-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .nm-product-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 @keyframes float-slow {
@@ -46,6 +322,10 @@
   animation-play-state: paused;
 }
 
+.animate-marquee:focus-within {
+  animation-play-state: paused;
+}
+
 @keyframes loading-wordmark {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.88; transform: scale(1.015); }
@@ -70,9 +350,44 @@
    :focus-visible only fires for keyboard/programmatic focus, not mouse clicks,
    so it never affects the mouse-click look those outline-none rules target. */
 :focus-visible {
-  outline: 2px solid var(--color-basil-light);
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline: 3px solid var(--color-basil-light);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* The search form owns the visible focus treatment through focus-within.
+   Suppress the global fallback on its child input to avoid a double ring. */
+.nm-site-search-input:focus,
+.nm-site-search-input:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
+/* Auth fields use one deliberate focus treatment. This overrides the global
+   fallback so the input never renders a ring and an outline at the same time. */
+.nm-auth-field {
+  min-height: 3rem;
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-paper);
+  padding: 0.625rem 1rem;
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  box-shadow: none;
+}
+
+.nm-auth-field:focus {
+  border-color: transparent;
+  outline: 2px solid var(--color-basil);
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+.nm-auth-field:focus-visible {
+  outline: 2px solid var(--color-basil);
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
